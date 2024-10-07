@@ -57,6 +57,7 @@ const ChatArea = ({ currentUser, chatUser }) => {
     const messageData = {
       messageId: newMessageRef.key,
       messageOG: newMessage, // Original message (can be modified later for translations etc.)
+      message: newMessage, // Default message is the original message
       senderId: currentUser.uid,
       timestamp: serverTimestamp() // Use Firebase server timestamp
     };

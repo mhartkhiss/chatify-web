@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail, signOut } from "firebase/auth"; // Import signOut
-import { ref, set, serverTimestamp } from "firebase/database"; // Firebase database imports
+import { ref, set } from "firebase/database"; // Firebase database imports
 import { auth, database } from "../../firebaseConfig"; // Include database
 import { Button, TextField, Container, Typography, Box } from "@mui/material";
 import { useNavigate } from "react-router-dom";
@@ -16,6 +16,18 @@ const Register = () => {
   const [emailStatus, setEmailStatus] = useState(""); // For "Available" or "In Use" status
   const [isCheckingEmail, setIsCheckingEmail] = useState(false); // To show loading state
   const navigate = useNavigate();
+
+  // Function to format the date to "YYYY-MM-DD HH:MM:SS"
+  const formatDate = (date) => {
+    const pad = (num) => (num < 10 ? '0' + num : num); // Pad single digits with leading zero
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+    const seconds = pad(date.getSeconds());
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  };
 
   // Debounce mechanism to delay the email validation
   useEffect(() => {
@@ -86,6 +98,10 @@ const Register = () => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      // Get the current date and time, formatted as a string
+      const currentDate = new Date();
+      const formattedDate = formatDate(currentDate); // Format current date
+
       // Prepare default user data like in your Android app
       const userData = {
         userId: user.uid,
@@ -94,8 +110,8 @@ const Register = () => {
         profileImageUrl: "none", // Default profile image
         accountType: "free", // Default account type
         language: null, // Default language is null
-        createdAt: serverTimestamp(), // Timestamp when user is created
-        lastLoginDate: serverTimestamp(), // Timestamp for last login (same as creation initially)
+        createdAt: formattedDate, // Formatted createdAt date
+        lastLoginDate: formattedDate, // Formatted last login date
         translator: "google" // Default translator
       };
 

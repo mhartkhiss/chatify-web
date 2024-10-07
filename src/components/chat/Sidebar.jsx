@@ -3,12 +3,13 @@ import { Avatar, Box, Typography, List, ListItem, ListItemAvatar, ListItemText }
 import { getDatabase, ref, onValue } from "firebase/database"; // Firebase imports
 import SearchBar from './SearchBar';
 import { green, grey } from '@mui/material/colors';
-import { getAuth, signOut } from 'firebase/auth';
+import { getAuth, signOut } from "firebase/auth";
 import { useNavigate } from 'react-router-dom';
 
 const Sidebar = ({ currentUser, selectChatUser }) => {
-  const [users, setUsers] = useState([]); // All users
-  const [conversations, setConversations] = useState([]); // Users with conversations
+  const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]); // State to store filtered users
+  const [conversations, setConversations] = useState([]); // Track conversations
   const navigate = useNavigate();
   const auth = getAuth();
 
@@ -32,52 +33,24 @@ const Sidebar = ({ currentUser, selectChatUser }) => {
       if (usersData) {
         const allUsers = Object.values(usersData).filter(user => user.userId !== currentUser.uid); // Exclude current user
         setUsers(allUsers); // Store all users
+        setFilteredUsers(allUsers); // Initially, show all users
       }
     });
+  }, [currentUser]);
 
-    // Fetch conversations
-    const fetchConversations = () => {
-      const conversationPromises = users.map(user => {
-        const chatId = currentUser.uid < user.userId 
-          ? `${currentUser.uid}_${user.userId}` 
-          : `${user.userId}_${currentUser.uid}`;
-        
-        const chatRef = ref(db, `messages/${chatId}`);
-
-        // Listen for changes in the conversation between current user and this user
-        return new Promise((resolve) => {
-          onValue(chatRef, (snapshot) => {
-            const messages = snapshot.val();
-            if (messages) {
-              // Find the latest message by sorting messages by timestamp
-              const lastMessage = Object.values(messages).sort((a, b) => b.timestamp - a.timestamp)[0];
-              resolve({ user, lastMessage });
-            } else {
-              resolve(null); // No conversation
-            }
-          });
-        });
-      });
-
-      // Process and sort conversation data
-      Promise.all(conversationPromises).then(conversations => {
-        const validConversations = conversations.filter(conversation => conversation !== null);
-        // Sort conversations by the latest message timestamp dynamically
-        validConversations.sort((a, b) => b.lastMessage.timestamp - a.lastMessage.timestamp);
-        setConversations(validConversations);
-      });
-    };
-
-    // Only fetch conversations if users are loaded
-    if (users.length > 0) {
-      fetchConversations();
+  // Handle search input from SearchBar
+  const handleSearch = (query) => {
+    if (query === "") {
+      setFilteredUsers(users); // If query is empty, show all users
+    } else {
+      const lowerCaseQuery = query.toLowerCase();
+      const filtered = users.filter(user =>
+        user.username.toLowerCase().includes(lowerCaseQuery) ||
+        user.email.toLowerCase().includes(lowerCaseQuery)
+      );
+      setFilteredUsers(filtered); // Update filtered users list
     }
-  }, [currentUser, users]);
-
-  // Get the list of users without conversations
-  const usersWithoutConversations = users.filter(user =>
-    !conversations.some(conversation => conversation.user.userId === user.userId)
-  );
+  };
 
   return (
     <Box
@@ -95,40 +68,22 @@ const Sidebar = ({ currentUser, selectChatUser }) => {
         <Typography variant="h6" gutterBottom onClick={handleLogout} sx={{ cursor: 'pointer' }}>
           Chatify
         </Typography>
-        <SearchBar />
+        <SearchBar onSearch={handleSearch} /> {/* Pass the search handler */}
       </Box>
       
       {/* Scrollable list of users */}
       <Box sx={{ overflowY: 'auto', flexGrow: 1 }}>
         <List>
-          {/* Display users with conversations first */}
-          {conversations.map(({ user, lastMessage }) => (
+          {/* Display filtered users */}
+          {filteredUsers.map(user => (
             <ListItem key={user.userId} button onClick={() => selectChatUser(user)}>
               <ListItemAvatar>
                 <Avatar src={user.profileImageUrl} sx={{ bgcolor: user.online ? green[500] : grey[300] }} />
               </ListItemAvatar>
               <ListItemText
                 primary={user.username}
-                secondary={`Last message: ${new Date(lastMessage.timestamp).toLocaleTimeString()}`}
+                secondary={user.email}
                 sx={{ ml: 1 }}
-                primaryTypographyProps={{ fontSize: '1rem' }}
-                secondaryTypographyProps={{ fontSize: '0.8rem', color: 'gray' }}
-              />
-            </ListItem>
-          ))}
-
-          {/* Display users without conversations */}
-          {usersWithoutConversations.map((user) => (
-            <ListItem key={user.userId} button onClick={() => selectChatUser(user)}>
-              <ListItemAvatar>
-                <Avatar src={user.profileImageUrl} sx={{ bgcolor: user.online ? green[500] : grey[300] }} />
-              </ListItemAvatar>
-              <ListItemText
-                primary={user.username}
-                secondary={user.language}  // No conversation, so just show other info
-                sx={{ ml: 1 }}
-                primaryTypographyProps={{ fontSize: '1rem' }}
-                secondaryTypographyProps={{ fontSize: '0.8rem', color: 'gray' }}
               />
             </ListItem>
           ))}

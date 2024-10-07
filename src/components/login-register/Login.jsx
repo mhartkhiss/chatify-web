@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Button, TextField, Container, Typography, Box, Snackbar, Alert } from "@mui/material";
+import { Button, TextField, Container, Typography, Box, Snackbar, Alert, Link } from "@mui/material";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../../firebaseConfig";
@@ -30,6 +30,11 @@ const Login = () => {
     } catch (err) {
       setError(err.message);
     }
+  };
+
+  // Redirect to the Forgot Password page
+  const handleForgotPassword = () => {
+    navigate("/forgot-password");
   };
 
   return (
@@ -66,6 +71,16 @@ const Login = () => {
         <Button href="/register" variant="outlined" fullWidth>
           Register
         </Button>
+        
+        {/* Centered Forgot Password Link */}
+        <Link
+          component="button"
+          variant="body2"
+          onClick={handleForgotPassword}
+          sx={{ textAlign: "center", mt: 2 }}
+        >
+          Forgot Password?
+        </Link>
       </Box>
 
       {/* Snackbar for Registration Success */}

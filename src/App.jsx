@@ -4,6 +4,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './components/login-register/Login';
 import ChatLayout from './components/chat/ChatLayout';
 import Register from './components/login-register/Register';
+import ForgotPassword from './components/login-register/ForgotPassword';
+import { CircularProgress } from '@mui/material';
 
 const App = () => {
   const [currentUser, setCurrentUser] = useState(null);
@@ -30,10 +32,13 @@ const App = () => {
     return () => unsubscribe();
   }, []);
 
-  // Show loading state until Firebase auth is initialized
   if (loading) {
-    return <div>Loading...</div>;
-  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+      <CircularProgress />
+    </div>
+  );
+}
 
   return (
     <Router>
@@ -42,6 +47,7 @@ const App = () => {
         <Route path="/login" element={currentUser ? <Navigate to="/chat" /> : <Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/chat" element={currentUser ? <ChatLayout currentUser={currentUser} /> : <Navigate to="/login" />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
       </Routes>
     </Router>
   );
