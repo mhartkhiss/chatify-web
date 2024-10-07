@@ -32,13 +32,25 @@ const App = () => {
     return () => unsubscribe();
   }, []);
 
+  // Handle logout functionality
+  const handleLogout = async () => {
+    const auth = getAuth();
+    try {
+      await auth.signOut(); // Sign out the user
+      setCurrentUser(null); // Set currentUser to null
+      localStorage.removeItem('currentUser'); // Remove from localStorage
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
   if (loading) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-      <CircularProgress />
-    </div>
-  );
-}
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </div>
+    );
+  }
 
   return (
     <Router>
@@ -46,7 +58,12 @@ const App = () => {
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={currentUser ? <Navigate to="/chat" /> : <Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/chat" element={currentUser ? <ChatLayout currentUser={currentUser} /> : <Navigate to="/login" />} />
+        <Route 
+          path="/chat" 
+          element={currentUser 
+            ? <ChatLayout currentUser={currentUser} handleLogout={handleLogout} /> 
+            : <Navigate to="/login" />} 
+        />
         <Route path="/forgot-password" element={<ForgotPassword />} />
       </Routes>
     </Router>

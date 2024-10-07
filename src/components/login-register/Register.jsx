@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail, signOut } from "firebase/auth"; // Import signOut
-import { ref, set } from "firebase/database"; // Firebase database imports
-import { auth, database } from "../../firebaseConfig"; // Include database
-import { Button, TextField, Container, Typography, Box } from "@mui/material";
-import { useNavigate } from "react-router-dom";
-import { green, red } from '@mui/material/colors';
+import React, { useState } from "react";
+import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail, signOut } from "firebase/auth";
+import { ref, set } from "firebase/database";
+import { TextField, Button, Container, Typography, Box } from "@mui/material";
+import { auth, database } from "../../firebaseConfig";
 
 const Register = () => {
   const [email, setEmail] = useState("");
@@ -13,187 +11,182 @@ const Register = () => {
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
-  const [emailStatus, setEmailStatus] = useState(""); // For "Available" or "In Use" status
-  const [isCheckingEmail, setIsCheckingEmail] = useState(false); // To show loading state
-  const navigate = useNavigate();
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
 
-  // Function to format the date to "YYYY-MM-DD HH:MM:SS"
-  const formatDate = (date) => {
-    const pad = (num) => (num < 10 ? '0' + num : num); // Pad single digits with leading zero
-    const year = date.getFullYear();
-    const month = pad(date.getMonth() + 1);
-    const day = pad(date.getDate());
-    const hours = pad(date.getHours());
-    const minutes = pad(date.getMinutes());
-    const seconds = pad(date.getSeconds());
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-  };
-
-  // Debounce mechanism to delay the email validation
-  useEffect(() => {
-    if (email && /\S+@\S+\.\S+/.test(email)) {
-      const delayDebounceFn = setTimeout(() => {
-        checkEmailAvailability(); // Call email availability check if email is valid
-      }, 500);
-
-      return () => clearTimeout(delayDebounceFn); // Cleanup timeout on each re-render
-    } else {
-      // Reset the status and error if email format is invalid
-      setEmailStatus("");
-      setEmailError("Please enter a valid email.");
-    }
-  }, [email]);
-
-  // Function to check if the email is already in use
-  const checkEmailAvailability = async () => {
-    setIsCheckingEmail(true);
-    setEmailStatus(""); // Reset email status
-
-    try {
-      const methods = await fetchSignInMethodsForEmail(auth, email);
-      if (methods.length > 0) {
-        // If methods array is not empty, email already has an account
-        setEmailError("Email is already in use.");
-        setEmailStatus("In Use");
-      } else {
-        setEmailError(""); // Clear any previous error
-        setEmailStatus("Available"); // Mark as available
-      }
-    } catch (err) {
-      setEmailError("Invalid email format."); // Set error if Firebase fails
-    }
-
-    setIsCheckingEmail(false); // Stop showing the loading state
-  };
-
+  // Function to handle registration
   const handleRegister = async (e) => {
     e.preventDefault();
 
-    // Reset previous error messages
+    // Clear previous errors
+    setEmailError("");
     setPasswordError("");
     setConfirmPasswordError("");
 
-    let valid = true;
-
-    if (!password) {
-      setPasswordError("Password is required.");
-      valid = false;
-    } else if (password.length < 6) {
-      setPasswordError("Password must be at least 6 characters.");
-      valid = false;
-    }
-
-    if (!confirmPassword) {
-      setConfirmPasswordError("Please confirm your password.");
-      valid = false;
-    } else if (password !== confirmPassword) {
+    if (password !== confirmPassword) {
       setConfirmPasswordError("Passwords do not match.");
-      valid = false;
+      return;
     }
 
-    if (!valid || emailStatus !== "Available") return; // Prevent submission if not valid or email is in use
-
-    // Proceed with Firebase registration if all validations are passed
+    // Check if email is already in use
+    setIsCheckingEmail(true);
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      const methods = await fetchSignInMethodsForEmail(auth, email);
+      setIsCheckingEmail(false);
 
-      // Get the current date and time, formatted as a string
-      const currentDate = new Date();
-      const formattedDate = formatDate(currentDate); // Format current date
+      if (methods.length > 0) {
+        // If methods exist, the email is already in use
+        setEmailError("Email is already in use.");
+      } else {
+        // Proceed with registration if the email is available
+        try {
+          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          const user = userCredential.user;
 
-      // Prepare default user data like in your Android app
-      const userData = {
-        userId: user.uid,
-        email: email,
-        username: email, // You may add username field to the form if needed
-        profileImageUrl: "none", // Default profile image
-        accountType: "free", // Default account type
-        language: null, // Default language is null
-        createdAt: formattedDate, // Formatted createdAt date
-        lastLoginDate: formattedDate, // Formatted last login date
-        translator: "google" // Default translator
-      };
+          // Get the current date and time in the desired format
+          const currentDate = new Date();
+          const formattedDate = currentDate.toISOString();
 
-      // Store user data in Firebase Realtime Database
-      await set(ref(database, 'users/' + user.uid), userData);
+          // Prepare user data to save in the database
+          const userData = {
+            userId: user.uid,
+            email: email,
+            username: email,
+            profileImageUrl: "none",
+            accountType: "free",
+            language: null,
+            createdAt: formattedDate,
+            lastLoginDate: formattedDate,
+            translator: "google",
+          };
 
-      console.log("User registered successfully");
+          // Save user data to Firebase Database
+          const userRef = ref(database, `users/${user.uid}`);
+          await set(userRef, userData);
 
-      // Sign the user out after registration
-      await signOut(auth);
+          // Set registration success flag in sessionStorage
+          sessionStorage.setItem("registered", "true");
 
-      // Store a flag in sessionStorage indicating successful registration
-      sessionStorage.setItem("registered", "true");
+          // Sign out the user after registration
+          await signOut(auth);
 
-      // Redirect to login page
-      navigate("/login");
-    } catch (err) {
-      setEmailError(err.message); // Handle Firebase error
+          // Redirect to login page
+          window.location.href = "/login";
+        } catch (registrationError) {
+          // Handle Firebase auth-specific errors
+          if (registrationError.code === "auth/email-already-in-use") {
+            setEmailError("Email is already in use.");
+          } else if (registrationError.code === "auth/invalid-email") {
+            setEmailError("Invalid email address.");
+          } else {
+            setPasswordError(registrationError.message);
+          }
+        }
+      }
+    } catch (error) {
+      setIsCheckingEmail(false);
+      setEmailError("Error checking email availability.");
     }
   };
 
   return (
-    <Container maxWidth="sm">
-      <Box
-        component="form"
-        onSubmit={handleRegister}
-        sx={{ mt: 8, display: 'flex', flexDirection: 'column', gap: 2 }}
+    <Box
+      sx={{
+        display: "flex",
+        minHeight: "100vh",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "linear-gradient(135deg, #ece9e6 0%, #ffffff 100%)",
+      }}
+    >
+      <Container
+        maxWidth="xs"
+        sx={{
+          p: 4,
+          boxShadow: 3,
+          backgroundColor: "#fff",
+          borderRadius: 2,
+        }}
       >
-        <Typography variant="h4" gutterBottom>
-          Register
-        </Typography>
-        {/* Email Field with real-time availability check */}
-        <TextField
-          label="Email"
-          variant="outlined"
-          fullWidth
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          error={Boolean(emailError)} // Highlight field in red if error exists
-          helperText={
-            isCheckingEmail
-              ? "Checking..."
-              : emailError || (emailStatus === "Available" && (
-                <span style={{ color: green[500] }}>Available</span>
-              )) || (emailStatus === "In Use" && (
-                <span style={{ color: red[500] }}>In Use</span>
-              ))
-          }
-          required
-        />
-        {/* Password Field */}
-        <TextField
-          label="Password"
-          type="password"
-          variant="outlined"
-          fullWidth
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          error={Boolean(passwordError)}
-          helperText={passwordError}
-          required
-        />
-        {/* Confirm Password Field */}
-        <TextField
-          label="Confirm Password"
-          type="password"
-          variant="outlined"
-          fullWidth
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          error={Boolean(confirmPasswordError)}
-          helperText={confirmPasswordError}
-          required
-        />
-        <Button type="submit" variant="contained" fullWidth>
-          Register
-        </Button>
-        <Button href="/login" variant="outlined" fullWidth>
-          Login
-        </Button>
-      </Box>
-    </Container>
+        <Box
+          component="form"
+          onSubmit={handleRegister}
+          sx={{ display: "flex", flexDirection: "column", gap: 3 }}
+        >
+          <Typography variant="h4" textAlign="center" gutterBottom>
+            Register
+          </Typography>
+
+          <TextField
+            label="Email"
+            variant="outlined"
+            fullWidth
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            error={Boolean(emailError)}
+            helperText={emailError || ""}
+            required
+            sx={{ boxShadow: 1, borderRadius: 1 }}
+          />
+
+          <TextField
+            label="Password"
+            type="password"
+            variant="outlined"
+            fullWidth
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            error={Boolean(passwordError)}
+            helperText={passwordError || ""}
+            required
+            sx={{ boxShadow: 1, borderRadius: 1 }}
+          />
+
+          <TextField
+            label="Confirm Password"
+            type="password"
+            variant="outlined"
+            fullWidth
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            error={Boolean(confirmPasswordError)}
+            helperText={confirmPasswordError || ""}
+            required
+            sx={{ boxShadow: 1, borderRadius: 1 }}
+          />
+
+          <Button
+            type="submit"
+            variant="contained"
+            fullWidth
+            size="large"
+            sx={{
+              py: 1.5,
+              background: "linear-gradient(90deg, #4a90e2, #007aff)",
+              color: "white",
+              "&:hover": { backgroundColor: "#007aff" },
+            }}
+            disabled={isCheckingEmail} // Disable button while checking email
+          >
+            {isCheckingEmail ? "Checking..." : "Register"}
+          </Button>
+
+          <Button
+            href="/login"
+            variant="outlined"
+            fullWidth
+            size="large"
+            sx={{
+              py: 1.5,
+              borderColor: "#007aff",
+              color: "#007aff",
+              "&:hover": { backgroundColor: "#e3f2fd", borderColor: "#007aff" },
+            }}
+          >
+            Login
+          </Button>
+        </Box>
+      </Container>
+    </Box>
   );
 };
 

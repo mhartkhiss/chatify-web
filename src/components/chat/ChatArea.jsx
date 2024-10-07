@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Box, Typography, Avatar, Grid, TextField, Button } from '@mui/material';
-import { getDatabase, ref, onValue, push, set, serverTimestamp } from "firebase/database"; // Firebase imports
+import { getDatabase, ref, onValue, push, set, serverTimestamp, off } from "firebase/database"; // Firebase imports
 
 const ChatArea = ({ currentUser, chatUser }) => {
   const [messages, setMessages] = useState([]);
@@ -24,7 +24,7 @@ const ChatArea = ({ currentUser, chatUser }) => {
       const messagesRef = ref(db, `messages/${chatId}`);
 
       // Fetch messages from Firebase
-      onValue(messagesRef, (snapshot) => {
+      const unsubscribe = onValue(messagesRef, (snapshot) => {
         const data = snapshot.val();
         if (data) {
           const messageList = Object.values(data); // Get all messages
@@ -33,6 +33,9 @@ const ChatArea = ({ currentUser, chatUser }) => {
           setMessages([]); // No messages found
         }
       });
+
+      // Cleanup function to unsubscribe from the previous listener when switching users
+      return () => off(messagesRef);  // Unsubscribe from the previous listener
     }
   }, [currentUser, chatUser]);
 
@@ -76,24 +79,37 @@ const ChatArea = ({ currentUser, chatUser }) => {
       handleSendMessage(); // Trigger sending the message
     }
   };
+  
 
   return (
-    <Box sx={{ height: '100vh', p: 3, display: 'flex', flexDirection: 'column', backgroundColor: '#fff' }}>
+    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f5f7fb' }}>
       {chatUser && (
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <Avatar src={chatUser.profileImageUrl} sx={{ mr: 2 }} />
-        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-          <Typography variant="h6">{chatUser.username}</Typography>
-          <Typography variant="h8" sx={{ color: 'gray' }}>
-            {chatUser.language}
-          </Typography>
-        </Box>
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            p: 2, 
+            backgroundColor: '#ffffff', 
+            borderBottom: '1px solid #e0e0e0', 
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            borderRadius: '0 0 8px 8px' // Slight rounding on the bottom
+          }}
+        >
+          <Avatar src={chatUser.profileImageUrl} sx={{ width: 48, height: 48, mr: 2 }} />
+          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+            <Typography variant="h6" sx={{ fontWeight: '500', color: '#333' }}>{chatUser.username}</Typography>
+            <Typography variant="body2" sx={{ color: '#888' }}>
+              {chatUser.language || chatUser.email}
+            </Typography>
+          </Box>
         </Box>
       )}
       <Box 
         sx={{ 
           flexGrow: 1, 
           overflowY: 'auto', 
+          p: 3, 
+          backgroundColor: '#f0f4f8',
           // Custom scrollbar hiding
           scrollbarWidth: 'none', // Firefox
           '&::-webkit-scrollbar': {
@@ -118,16 +134,31 @@ const ChatArea = ({ currentUser, chatUser }) => {
               <Box
                 sx={{
                   p: 2,
-                  backgroundColor: msg.senderId === currentUser.uid ? '#7953d2' : '#eee',
-                  color: msg.senderId === currentUser.uid ? '#fff' : '#000',
-                  borderRadius: '12px',
+                  backgroundColor: msg.senderId === currentUser.uid ? '#007aff' : '#e5e7eb',
+                  color: msg.senderId === currentUser.uid ? '#fff' : '#333',
+                  borderRadius: '16px',
+                  boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
                   position: 'relative',
                   wordWrap: 'break-word',
+                  maxWidth: '100%', // Ensures message stays within bounds
+                  '&:before': {
+                    content: '""',
+                    position: 'absolute',
+                    bottom: -8,
+                    left: msg.senderId === currentUser.uid ? 'auto' : 10,
+                    right: msg.senderId === currentUser.uid ? 10 : 'auto',
+                    width: 0,
+                    height: 0,
+                    borderTop: '8px solid',
+                    borderTopColor: msg.senderId === currentUser.uid ? '#007aff' : '#e5e7eb',
+                    borderLeft: '8px solid transparent',
+                    borderRight: '8px solid transparent'
+                  }
                 }}
               >
                 {/* Display messageOG */}
-                <Typography>{msg.messageOG}</Typography>
-                <Typography variant="caption" sx={{ position: 'absolute', right: 10, bottom: 5 }}>
+                <Typography variant="body1">{msg.messageOG}</Typography>
+                <Typography variant="caption" sx={{ position: 'absolute', right: 10, bottom: 5, color: '#bbb' }}>
                   {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : 'Sending...'}
                 </Typography>
               </Box>
@@ -143,11 +174,12 @@ const ChatArea = ({ currentUser, chatUser }) => {
       <Box
         sx={{
           display: 'flex',
-          mt: 2,
           alignItems: 'center',
           justifyContent: 'space-between',
           p: 2,
-          borderTop: '1px solid #ddd', // Optional styling
+          backgroundColor: '#ffffff',
+          borderTop: '1px solid #e0e0e0',
+          boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.05)',
         }}
       >
         <TextField
@@ -157,9 +189,35 @@ const ChatArea = ({ currentUser, chatUser }) => {
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)} // Update message input
           onKeyPress={handleKeyPress} // Handle Enter key
-          sx={{ mr: 2 }}
+          sx={{
+            borderRadius: 2,
+            backgroundColor: '#f5f7fb',
+            mr: 2,
+            '& .MuiOutlinedInput-root': {
+              '& fieldset': {
+                borderColor: '#ddd',
+              },
+              '&:hover fieldset': {
+                borderColor: '#007aff',
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: '#007aff',
+              },
+            },
+          }}
         />
-        <Button variant="contained" onClick={handleSendMessage}>
+        <Button 
+          variant="contained" 
+          onClick={handleSendMessage}
+          sx={{ 
+            backgroundColor: '#007aff', 
+            color: '#fff',
+            px: 3, 
+            py: 1, 
+            borderRadius: 2, 
+            '&:hover': { backgroundColor: '#005bb5' },
+          }}
+        >
           Send
         </Button>
       </Box>

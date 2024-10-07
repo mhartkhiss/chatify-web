@@ -38,63 +38,104 @@ const Login = () => {
   };
 
   return (
-    <Container maxWidth="sm">
-      <Box
-        component="form"
-        onSubmit={handleLogin}
-        sx={{ mt: 8, display: 'flex', flexDirection: 'column', gap: 2 }}
+    <Box
+      sx={{
+        display: "flex",
+        minHeight: "100vh",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "linear-gradient(135deg, #ece9e6 0%, #ffffff 100%)",
+      }}
+    >
+      <Container
+        maxWidth="xs"
+        sx={{
+          p: 4,
+          boxShadow: 3,
+          backgroundColor: "#fff",
+          borderRadius: 2,
+        }}
       >
-        <Typography variant="h4" gutterBottom>
-          Login
-        </Typography>
-        {error && <Typography color="error">{error}</Typography>}
-        <TextField
-          label="Email"
-          variant="outlined"
-          fullWidth
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <TextField
-          label="Password"
-          type="password"
-          variant="outlined"
-          fullWidth
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-        <Button type="submit" variant="contained" fullWidth>
-          Login
-        </Button>
-        <Button href="/register" variant="outlined" fullWidth>
-          Register
-        </Button>
-        
-        {/* Centered Forgot Password Link */}
-        <Link
-          component="button"
-          variant="body2"
-          onClick={handleForgotPassword}
-          sx={{ textAlign: "center", mt: 2 }}
+        <Box
+          component="form"
+          onSubmit={handleLogin}
+          sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}
         >
-          Forgot Password?
-        </Link>
-      </Box>
+          <Typography variant="h4" textAlign="center" gutterBottom>
+            Login
+          </Typography>
+          {error && <Typography color="error">{error}</Typography>}
+          <TextField
+            label="Email"
+            variant="outlined"
+            fullWidth
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            sx={{ boxShadow: 1, borderRadius: 1 }}
+          />
+          <TextField
+            label="Password"
+            type="password"
+            variant="outlined"
+            fullWidth
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            sx={{ boxShadow: 1, borderRadius: 1 }}
+          />
+          <Button
+            type="submit"
+            variant="contained"
+            fullWidth
+            size="large"
+            sx={{
+              py: 1.5,
+              background: "linear-gradient(90deg, #4a90e2, #007aff)",
+              color: "white",
+              "&:hover": { backgroundColor: "#007aff" },
+            }}
+          >
+            Login
+          </Button>
+          <Button
+            href="/register"
+            variant="outlined"
+            fullWidth
+            size="large"
+            sx={{
+              py: 1.5,
+              borderColor: "#007aff",
+              color: "#007aff",
+              "&:hover": { backgroundColor: "#e3f2fd", borderColor: "#007aff" },
+            }}
+          >
+            Register
+          </Button>
 
-      {/* Snackbar for Registration Success */}
-      <Snackbar
-        open={openSnackbar}
-        autoHideDuration={5000} // Show for 5 seconds
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-        onClose={() => setOpenSnackbar(false)}
-      >
-        <Alert onClose={() => setOpenSnackbar(false)} severity="success" sx={{ width: '100%' }}>
-          Registration Success!
-        </Alert>
-      </Snackbar>
-    </Container>
+          <Link
+            component="button"
+            variant="body2"
+            onClick={handleForgotPassword}
+            sx={{ textAlign: "center", mt: 2 }}
+          >
+            Forgot Password?
+          </Link>
+        </Box>
+
+        {/* Snackbar for Registration Success */}
+        <Snackbar
+          open={openSnackbar}
+          autoHideDuration={5000} // Show for 5 seconds
+          anchorOrigin={{ vertical: "top", horizontal: "center" }}
+          onClose={() => setOpenSnackbar(false)}
+        >
+          <Alert onClose={() => setOpenSnackbar(false)} severity="success" sx={{ width: '100%' }}>
+            Registration Success!
+          </Alert>
+        </Snackbar>
+      </Container>
+    </Box>
   );
 };
 

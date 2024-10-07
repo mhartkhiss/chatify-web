@@ -1,28 +1,51 @@
 import React, { useState } from 'react';
-import { Grid } from '@mui/material';
+import { Box } from '@mui/material';
 import Sidebar from './Sidebar';
 import ChatArea from './ChatArea';
 
 const ChatLayout = ({ currentUser }) => {
-  const [chatUser, setChatUser] = useState(null); // The user currently being chatted with
+  const [chatUser, setChatUser] = useState(null);
 
+  // Handle selecting a user from the sidebar
   const handleSelectChatUser = (user) => {
-    setChatUser(user);
+    setChatUser(user); // Set the selected chat user
   };
 
   return (
-    <Grid container>
-      <Grid item xs={3}>
+    <Box sx={{
+      display: 'flex',
+      height: '100vh',
+      backgroundColor: '#f0f2f5',  // Light background for the layout
+      
+    }}>
+      <Box sx={{
+        width: '25%',
+        borderRight: '1px solid #ddd',  // Border between sidebar and chat area
+        boxShadow: 3,
+      }}>
         <Sidebar currentUser={currentUser} selectChatUser={handleSelectChatUser} />
-      </Grid>
-      <Grid item xs={9}>
+
+      </Box>
+      <Box sx={{
+        width: '75%',
+        backgroundColor: '#fff',  // Main chat area background
+      }}>
         {chatUser ? (
           <ChatArea currentUser={currentUser} chatUser={chatUser} />
         ) : (
-          <div>Select a user to start chatting</div>
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            fontSize: '24px',
+            color: '#888',
+          }}>
+            Select a chat to start messaging
+          </Box>
         )}
-      </Grid>
-    </Grid>
+      </Box>
+    </Box>
   );
 };
 

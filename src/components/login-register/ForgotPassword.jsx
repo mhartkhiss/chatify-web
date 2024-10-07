@@ -24,33 +24,74 @@ const ForgotPassword = () => {
   };
 
   return (
-    <Container maxWidth="sm">
-      <Box
-        component="form"
-        onSubmit={handlePasswordReset}
-        sx={{ mt: 8, display: 'flex', flexDirection: 'column', gap: 2 }}
+    <Box
+      sx={{
+        display: "flex",
+        minHeight: "100vh",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "linear-gradient(135deg, #ece9e6 0%, #ffffff 100%)",
+      }}
+    >
+      <Container
+        maxWidth="xs"
+        sx={{
+          p: 4,
+          boxShadow: 3,
+          backgroundColor: "#fff",
+          borderRadius: 2,
+        }}
       >
-        <Typography variant="h4" gutterBottom>
-          Forgot Password
-        </Typography>
-        {message && <Alert severity="success">{message}</Alert>}
-        {error && <Alert severity="error">{error}</Alert>}
-        <TextField
-          label="Email"
-          variant="outlined"
-          fullWidth
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <Button type="submit" variant="contained" fullWidth>
-          Send Password Reset Email
-        </Button>
-        <Button href="/login" variant="outlined" fullWidth>
-          Back to Login
-        </Button>
-      </Box>
-    </Container>
+        <Box
+          component="form"
+          onSubmit={handlePasswordReset}
+          sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}
+        >
+          <Typography variant="h4" textAlign="center" gutterBottom>
+            Forgot Password
+          </Typography>
+          {message && <Alert severity="success">{message}</Alert>}
+          {error && <Alert severity="error">{error}</Alert>}
+          <TextField
+            label="Email"
+            variant="outlined"
+            fullWidth
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            sx={{ boxShadow: 1, borderRadius: 1 }}
+          />
+          <Button
+            type="submit"
+            variant="contained"
+            fullWidth
+            size="large"
+            sx={{
+              py: 1.5,
+              background: "linear-gradient(90deg, #4a90e2, #007aff)",
+              color: "white",
+              "&:hover": { backgroundColor: "#007aff" },
+            }}
+          >
+            Send Password Reset Email
+          </Button>
+          <Button
+            href="/login"
+            variant="outlined"
+            fullWidth
+            size="large"
+            sx={{
+              py: 1.5,
+              borderColor: "#007aff",
+              color: "#007aff",
+              "&:hover": { backgroundColor: "#e3f2fd", borderColor: "#007aff" },
+            }}
+          >
+            Back to Login
+          </Button>
+        </Box>
+      </Container>
+    </Box>
   );
 };
 

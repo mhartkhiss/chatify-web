@@ -1,93 +1,92 @@
 import React, { useState, useEffect } from 'react';
-import { Avatar, Box, Typography, List, ListItem, ListItemAvatar, ListItemText } from '@mui/material';
-import { getDatabase, ref, onValue } from "firebase/database"; // Firebase imports
+import { Box, List, ListItem, ListItemText, Avatar, ListItemAvatar, Typography } from '@mui/material';
+import { getDatabase, ref, onValue } from 'firebase/database';
 import SearchBar from './SearchBar';
-import { green, grey } from '@mui/material/colors';
-import { getAuth, signOut } from "firebase/auth";
-import { useNavigate } from 'react-router-dom';
+import UserProfile from './UserProfile'; // Import UserProfile component
 
-const Sidebar = ({ currentUser, selectChatUser }) => {
+const Sidebar = ({ currentUser, selectChatUser, handleLogout }) => {
   const [users, setUsers] = useState([]);
-  const [filteredUsers, setFilteredUsers] = useState([]); // State to store filtered users
-  const [conversations, setConversations] = useState([]); // Track conversations
-  const navigate = useNavigate();
-  const auth = getAuth();
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth); // Log out the user
-      localStorage.removeItem('currentUser'); // Clear user session if using localStorage
-      navigate('/login'); // Redirect to login page
-    } catch (error) {
-      console.error("Error logging out:", error);
-    }
-  };
+  const [filteredUsers, setFilteredUsers] = useState([]);
 
   useEffect(() => {
     const db = getDatabase();
     const usersRef = ref(db, 'users');
-
-    // Fetch all users from Firebase
     onValue(usersRef, (snapshot) => {
-      const usersData = snapshot.val();
-      if (usersData) {
-        const allUsers = Object.values(usersData).filter(user => user.userId !== currentUser.uid); // Exclude current user
-        setUsers(allUsers); // Store all users
-        setFilteredUsers(allUsers); // Initially, show all users
-      }
+      const allUsers = snapshot.val() ? Object.values(snapshot.val()) : [];
+      const otherUsers = allUsers.filter(user => user.userId !== currentUser.uid);
+      setUsers(otherUsers);
+      setFilteredUsers(otherUsers); // Initially, show all users
     });
   }, [currentUser]);
 
-  // Handle search input from SearchBar
   const handleSearch = (query) => {
-    if (query === "") {
-      setFilteredUsers(users); // If query is empty, show all users
-    } else {
-      const lowerCaseQuery = query.toLowerCase();
-      const filtered = users.filter(user =>
-        user.username.toLowerCase().includes(lowerCaseQuery) ||
-        user.email.toLowerCase().includes(lowerCaseQuery)
-      );
-      setFilteredUsers(filtered); // Update filtered users list
-    }
+    const lowerCaseQuery = query.toLowerCase();
+    const filtered = users.filter(user =>
+      user.username.toLowerCase().includes(lowerCaseQuery) ||
+      user.email.toLowerCase().includes(lowerCaseQuery)
+    );
+    setFilteredUsers(filtered);
   };
 
   return (
     <Box
       sx={{
-        height: '100vh',               // Full viewport height
-        backgroundColor: grey[100],
-        p: 2,
-        borderRight: '1px solid #ddd',  // Optional: Adds a border to the right
+        height: '100vh',
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        backgroundColor: '#f7f9fc',
+        borderRight: '1px solid #ddd',
+        position: 'relative', // Ensure fixed positioning works correctly
       }}
     >
-      {/* Fixed section for "Chats" label and SearchBar */}
-      <Box sx={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: grey[100], pb: 2 }}>
-        <Typography variant="h6" gutterBottom onClick={handleLogout} sx={{ cursor: 'pointer' }}>
-          Chatify
-        </Typography>
-        <SearchBar onSearch={handleSearch} /> {/* Pass the search handler */}
+      {/* Search Bar */}
+      <Box
+        sx={{
+          position: 'sticky', // Stick the search bar to the top
+          top: 0,
+          zIndex: 1,
+          backgroundColor: '#f7f9fc', // Make sure it has a background
+          p: 2,
+          borderBottom: '1px solid #ddd',
+        }}
+      >
+        <SearchBar onSearch={handleSearch} />
       </Box>
-      
-      {/* Scrollable list of users */}
-      <Box sx={{ overflowY: 'auto', flexGrow: 1 }}>
+
+      {/* Scrollable List of Users */}
+      <Box
+        sx={{
+          flexGrow: 1,
+          overflowY: 'auto',
+        }}
+      >
         <List>
-          {/* Display filtered users */}
           {filteredUsers.map(user => (
             <ListItem key={user.userId} button onClick={() => selectChatUser(user)}>
               <ListItemAvatar>
-                <Avatar src={user.profileImageUrl} sx={{ bgcolor: user.online ? green[500] : grey[300] }} />
+                <Avatar src={user.profileImageUrl} />
               </ListItemAvatar>
               <ListItemText
                 primary={user.username}
-                secondary={user.email}
-                sx={{ ml: 1 }}
+                secondary={user.language || user.email}
               />
             </ListItem>
           ))}
         </List>
+      </Box>
+
+      {/* UserProfile component at the bottom */}
+      <Box
+        sx={{
+          position: 'sticky', // Stick the profile section to the bottom
+          bottom: 0,
+          zIndex: 1,
+          p: 2,
+          backgroundColor: '#f7f9fc',
+          borderTop: '1px solid #ddd',
+        }}
+      >
+        <UserProfile currentUser={currentUser} handleLogout={handleLogout} />
       </Box>
     </Box>
   );
