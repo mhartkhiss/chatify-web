@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, List, ListItem, ListItemText, Avatar, ListItemAvatar, Typography, Badge } from '@mui/material';
+import { Box, List, ListItem, ListItemText, Avatar, ListItemAvatar, Typography, Badge, Button, ButtonGroup } from '@mui/material';
 import { getDatabase, ref, onValue, update } from 'firebase/database';
 import SearchBar from './SearchBar';
 import UserProfile from './UserProfile';
@@ -12,6 +12,7 @@ const Sidebar = ({ currentUser, selectChatUser, handleLogout }) => {
   const [lastMessages, setLastMessages] = useState({});
   const [unreadMessages, setUnreadMessages] = useState({});
   const [selectedUserId, setSelectedUserId] = useState(null); // Track the selected user
+  const [filter, setFilter] = useState('recent'); // Filter: 'recent' or 'all'
 
   useEffect(() => {
     const db = getDatabase();
@@ -83,13 +84,15 @@ const Sidebar = ({ currentUser, selectChatUser, handleLogout }) => {
         user.username.toLowerCase().includes(lowerCaseQuery) ||
         user.email.toLowerCase().includes(lowerCaseQuery)
       );
-    } else {
+    } else if (filter === 'recent') {
       usersToDisplay = users.filter(user => userConversations[user.userId]?.hasConversation);
+    } else if (filter === 'all') {
+      usersToDisplay = users;
     }
 
     const sortedUsers = sortUsersByLatestMessage(usersToDisplay);
     setFilteredUsers(sortedUsers);
-  }, [searchQuery, users, userConversations]);
+  }, [searchQuery, users, userConversations, filter]);
 
   const handleSearch = (query) => {
     setSearchQuery(query);
@@ -136,7 +139,7 @@ const Sidebar = ({ currentUser, selectChatUser, handleLogout }) => {
         position: 'relative',
       }}
     >
-      {/* Search Bar */}
+      {/* Search Bar */} 
       <Box
         sx={{
           position: 'sticky',
@@ -148,6 +151,37 @@ const Sidebar = ({ currentUser, selectChatUser, handleLogout }) => {
         }}
       >
         <SearchBar onSearch={handleSearch} />
+        {/* Filter buttons */}
+        <ButtonGroup fullWidth size="small" sx={{ mt: 1 }}>
+          <Button
+            variant={filter === 'recent' ? 'contained' : 'outlined'}
+            onClick={() => setFilter('recent')}
+            sx={{
+              backgroundColor: filter === 'recent' ? '#AD49E1' : '#E5D9F2',
+              color: '#fff',
+              border: 'none', // Remove border
+              '&:hover': {
+                backgroundColor: '#9600ce',
+              },
+            }}
+          >
+            Recent
+          </Button>
+          <Button
+            variant={filter === 'all' ? 'contained' : 'outlined'}
+            onClick={() => setFilter('all')}
+            sx={{
+              backgroundColor: filter === 'all' ? '#AD49E1' : '#E5D9F2',
+              color: '#fff',
+              border: 'none', // Remove border
+              '&:hover': {
+                backgroundColor: '#9600ce',
+              },
+            }}
+          >
+            Show All Users
+          </Button>
+        </ButtonGroup>
       </Box>
 
       {/* Scrollable List of Users */}

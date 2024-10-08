@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Avatar, IconButton, Button, Dialog, DialogActions, DialogContent, LinearProgress } from '@mui/material';
+import { Box, Typography, Avatar, IconButton, Button, Dialog, DialogActions, DialogContent, LinearProgress, TextField, Popover, List, ListItem, ListItemButton } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { auth, database, storage } from '../../firebaseConfig'; // Firebase imports
@@ -14,6 +14,8 @@ const UserProfile = ({ currentUser }) => {
     username: 'Anonymous User',
     language: '',
   });
+  const [editingUsername, setEditingUsername] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
   const [avatarFile, setAvatarFile] = useState(null); // State for selected avatar file
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -22,6 +24,8 @@ const UserProfile = ({ currentUser }) => {
   const [uploadProgress, setUploadProgress] = useState(0); // Progress state
   const [uploading, setUploading] = useState(false); // Flag to check if the image is being uploaded
   const [oldAvatarUrl, setOldAvatarUrl] = useState(''); // Store the old avatar URL
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [searchTerm, setSearchTerm] = useState(''); // Anchor element for language popover
 
   useEffect(() => {
     const userRef = ref(database, `users/${currentUser.uid}`);
@@ -69,7 +73,7 @@ const UserProfile = ({ currentUser }) => {
 
     setUploading(true); // Start uploading
 
-    // Use `uploadBytesResumable` to track progress
+    // Use uploadBytesResumable to track progress
     const uploadTask = uploadBytesResumable(avatarStorageRef, croppedImage);
 
     uploadTask.on(
@@ -124,6 +128,37 @@ const UserProfile = ({ currentUser }) => {
     }
   };
 
+  const handleUsernameDoubleClick = () => {
+    setEditingUsername(true);
+    setNewUsername(userData.username);
+  };
+
+  const handleUsernameChange = async () => {
+    if (newUsername.trim() !== '') {
+      const userRef = ref(database, `users/${currentUser.uid}`);
+      await update(userRef, { username: newUsername });
+      setUserData((prevData) => ({ ...prevData, username: newUsername }));
+    }
+    setEditingUsername(false);
+  };
+
+  const handleLanguageDoubleClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleLanguageSelect = async (language) => {
+    const userRef = ref(database, `users/${currentUser.uid}`);
+    await update(userRef, { language });
+    setUserData((prevData) => ({ ...prevData, language }));
+    setAnchorEl(null);
+  };
+
+  const handlePopoverClose = () => {
+    setAnchorEl(null);
+  };
+
+  const open = Boolean(anchorEl);
+
   return (
     <Box sx={{
       display: 'flex',
@@ -165,14 +200,63 @@ const UserProfile = ({ currentUser }) => {
           />
         </Box>
         <Box>
-          <Typography variant="body1" sx={{ fontWeight: '500' }}>
-            {userData.username}
-          </Typography>
-          <Typography variant="caption" sx={{ color: '#b9bbbe' }}>
+          {editingUsername ? (
+            <TextField
+              value={newUsername}
+              onChange={(e) => setNewUsername(e.target.value)}
+              onBlur={handleUsernameChange}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleUsernameChange();
+              }}
+              size="small"
+              autoFocus
+              sx={{
+                input: { color: '#fff' },
+              }}
+            />
+          ) : (
+            <Typography
+              variant="body1"
+              sx={{ fontWeight: '500', cursor: 'pointer' }}
+              onClick={handleUsernameDoubleClick}
+            >
+              {userData.username}
+            </Typography>
+          )}
+          <Typography
+            variant="caption"
+            sx={{ color: '#b9bbbe', cursor: 'pointer' }}
+            onClick={handleLanguageDoubleClick}
+          >
             {userData.language || currentUser.email}
           </Typography>
         </Box>
       </Box>
+
+      {/* Language Popover */}
+      <Popover
+        open={open}
+        anchorEl={anchorEl}
+        onClose={handlePopoverClose}
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'center',
+        }}
+        transformOrigin={{
+          vertical: 'bottom',
+          horizontal: 'center',
+        }}
+      >
+        <Box sx={{ p: 2, minWidth: 250 }}><TextField placeholder='Search language...' variant='outlined' size='small' fullWidth sx={{ mb: 1 }} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /><List sx={{ maxHeight: 200, overflow: 'auto', border: '1px solid #ccc', borderRadius: '4px' }}>
+          {['English', 'Spanish', 'French', 'German', 'Chinese', 'Japanese', 'Russian', 'Italian', 'Portuguese', 'Hindi', 'Arabic', 'Korean', 'Dutch', 'Swedish', 'Greek', 'Turkish', 'Hebrew', 'Vietnamese', 'Thai', 'Indonesian', 'Danish', 'Finnish', 'Polish', 'Norwegian', 'Czech', 'Hungarian', 'Ukrainian', 'Malay', 'Romanian'].filter((language) => language.toLowerCase().includes(searchTerm.toLowerCase())).map((language) => (
+            <ListItem key={language} disablePadding>
+              <ListItemButton onClick={() => handleLanguageSelect(language)}>
+                {language}
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List></Box>
+      </Popover>
 
       {/* Crop Dialog */}
       <Dialog
