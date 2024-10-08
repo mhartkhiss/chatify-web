@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Avatar, IconButton, Button, Dialog, DialogActions, DialogContent } from '@mui/material';
+import { Box, Typography, Avatar, IconButton, Button, Dialog, DialogActions, DialogContent, LinearProgress } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { auth, database, storage } from '../../firebaseConfig'; // Firebase imports
 import { ref, onValue, update } from 'firebase/database'; // Firebase Realtime Database functions
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'; // Firebase Storage functions
+import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage'; // Firebase Storage functions
 import Cropper from 'react-easy-crop'; // Image Cropper
 import { getCroppedImg } from './cropImage'; // Import named export
 
@@ -19,6 +19,9 @@ const UserProfile = ({ currentUser }) => {
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [openCropDialog, setOpenCropDialog] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0); // Progress state
+  const [uploading, setUploading] = useState(false); // Flag to check if the image is being uploaded
+  const [oldAvatarUrl, setOldAvatarUrl] = useState(''); // Store the old avatar URL
 
   useEffect(() => {
     const userRef = ref(database, `users/${currentUser.uid}`);
@@ -30,6 +33,8 @@ const UserProfile = ({ currentUser }) => {
           username: data.username || 'Anonymous User',
           language: data.language || '',
         });
+
+        setOldAvatarUrl(data.profileImageUrl || ''); // Store the old avatar URL
       }
     });
 
@@ -57,23 +62,56 @@ const UserProfile = ({ currentUser }) => {
     setOpenCropDialog(false); // Close the dialog after cropping
   };
 
-  // Upload the cropped image to Firebase
+  // Upload the cropped image to Firebase with progress tracking
   const uploadAvatar = async (croppedImage) => {
     const storagePath = `avatars/${currentUser.uid}/${avatarFile.name}`;
     const avatarStorageRef = storageRef(storage, storagePath);
 
-    try {
-      await uploadBytes(avatarStorageRef, croppedImage);
-      const downloadURL = await getDownloadURL(avatarStorageRef);
-      const userRef = ref(database, `users/${currentUser.uid}`);
-      await update(userRef, { profileImageUrl: downloadURL });
+    setUploading(true); // Start uploading
 
-      setUserData((prevData) => ({
-        ...prevData,
-        profileImageUrl: downloadURL,
-      }));
+    // Use `uploadBytesResumable` to track progress
+    const uploadTask = uploadBytesResumable(avatarStorageRef, croppedImage);
+
+    uploadTask.on(
+      'state_changed',
+      (snapshot) => {
+        // Track progress (percentage)
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        setUploadProgress(progress);
+      },
+      (error) => {
+        console.error('Error uploading avatar:', error);
+        setUploading(false); // Stop uploading on error
+      },
+      async () => {
+        // Handle successful upload and get download URL
+        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+        const userRef = ref(database, `users/${currentUser.uid}`);
+        await update(userRef, { profileImageUrl: downloadURL });
+
+        // Delete the old avatar after uploading the new one
+        if (oldAvatarUrl && oldAvatarUrl !== '/default-avatar.png') {
+          deleteOldAvatar(oldAvatarUrl);
+        }
+
+        setUserData((prevData) => ({
+          ...prevData,
+          profileImageUrl: downloadURL,
+        }));
+
+        setUploading(false); // Stop uploading on success
+      }
+    );
+  };
+
+  // Delete the old avatar from Firebase Storage
+  const deleteOldAvatar = async (oldAvatarUrl) => {
+    const oldAvatarRef = storageRef(storage, oldAvatarUrl); // Get the reference to the old avatar in storage
+    try {
+      await deleteObject(oldAvatarRef);
+      console.log('Old avatar deleted successfully');
     } catch (error) {
-      console.error('Error uploading avatar:', error);
+      console.error('Error deleting old avatar:', error);
     }
   };
 
@@ -112,6 +150,19 @@ const UserProfile = ({ currentUser }) => {
               sx={{ width: 40, height: 40, cursor: 'pointer' }}
             />
           </label>
+          {/* Online status indicator */}
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: 0,
+              right: 0,
+              width: 12,
+              height: 12,
+              backgroundColor: '#43b581', // Green color for "online" status
+              borderRadius: '50%',
+              border: '2px solid #7a49a5', // Border matches background for a "cutout" effect
+            }}
+          />
         </Box>
         <Box>
           <Typography variant="body1" sx={{ fontWeight: '500' }}>
@@ -159,10 +210,20 @@ const UserProfile = ({ currentUser }) => {
             Cancel
           </Button>
           <Button onClick={handleCropUpload} color="primary">
-            Upload
+            Save
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Progress Bar for uploading */}
+      {uploading && (
+        <Box sx={{ width: '100%', mt: 2 }}>
+          <LinearProgress variant="determinate" value={uploadProgress} />
+          <Typography variant="caption" sx={{ color: '#b9bbbe' }}>
+            Uploading: {Math.round(uploadProgress)}%
+          </Typography>
+        </Box>
+      )}
 
       <Box sx={{ display: 'flex', alignItems: 'center' }}>
         <IconButton sx={{ color: '#b9bbbe' }} onClick={handleLogout}>

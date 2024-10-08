@@ -79,7 +79,30 @@ const ChatArea = ({ currentUser, chatUser }) => {
       handleSendMessage(); // Trigger sending the message
     }
   };
-  
+
+  // Format the timestamp based on when the message was sent (today, yesterday, or earlier)
+  const formatTimestamp = (timestamp) => {
+    const messageDate = new Date(timestamp);
+    const now = new Date();
+
+    const isToday = messageDate.toDateString() === now.toDateString();
+    const isYesterday = messageDate.toDateString() === new Date(now.setDate(now.getDate() - 1)).toDateString();
+
+    const timeString = messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    if (isToday) {
+      return `Today ${timeString}`;
+    } else if (isYesterday) {
+      return `Yesterday ${timeString}`;
+    } else {
+      const dateString = messageDate.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+      return `(${dateString}) ${timeString}`;
+    }
+  };
 
   return (
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f5f7fb' }}>
@@ -159,7 +182,7 @@ const ChatArea = ({ currentUser, chatUser }) => {
                 {/* Display messageOG */}
                 <Typography variant="body1">{msg.messageOG}</Typography>
                 <Typography variant="caption" sx={{ position: 'absolute', right: 10, bottom: 5, color: '#bbb' }}>
-                  {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : 'Sending...'}
+                  {msg.timestamp ? formatTimestamp(msg.timestamp) : 'Sending...'}
                 </Typography>
               </Box>
             </Grid>

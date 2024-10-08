@@ -9,7 +9,7 @@ export const loadImage = (url) => new Promise((resolve, reject) => { // Renamed 
 
 // Crop the image using the canvas API
 export const getCroppedImg = (imageSrc, croppedAreaPixels) => new Promise(async (resolve) => {
-  const image = await loadImage(URL.createObjectURL(imageSrc)); // Use loadImage instead of createImage
+  const image = await loadImage(URL.createObjectURL(imageSrc)); 
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
 
