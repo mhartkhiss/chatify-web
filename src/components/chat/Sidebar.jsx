@@ -164,9 +164,9 @@ const Sidebar = ({ currentUser, selectChatUser, handleLogout }) => {
               button
               onClick={() => handleUserSelect(user)}
               sx={{
-                backgroundColor: user.userId === selectedUserId ? '#e0e0e0' : 'transparent', // Highlight selected user
+                backgroundColor: user.userId === selectedUserId ? '#E5D9F2' : 'transparent', borderRadius: '5px', // Highlight selected user
                 '&:hover': {
-                  backgroundColor: user.userId === selectedUserId ? '#e0e0e0' : '#f0f0f0',
+                  backgroundColor: user.userId === selectedUserId ? '#E5D9F2' : '#f0f0f0',
                 },
               }}
             >

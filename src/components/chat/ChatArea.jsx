@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Typography, Avatar, Grid, TextField, Button } from '@mui/material';
+import { Box, Typography, Avatar, Grid, TextField, Button, Menu, MenuItem, IconButton } from '@mui/material';
+import SendIcon from '@mui/icons-material/Send'; // Import Send icon
 import { getDatabase, ref, onValue, push, set, serverTimestamp, off } from "firebase/database"; // Firebase imports
 
 const ChatArea = ({ currentUser, chatUser }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState(''); // For the new message input
+  const [anchorEl, setAnchorEl] = useState(null); // Anchor for the popup menu
+  const [selectedMessageId, setSelectedMessageId] = useState(null); // Track the selected message for menu
   const messagesEndRef = useRef(null); // Reference to the end of the messages list
 
   // Scroll to bottom whenever messages change
@@ -104,6 +107,32 @@ const ChatArea = ({ currentUser, chatUser }) => {
     }
   };
 
+  // Open the popup menu when a message (other than the current user's) is clicked
+  const handleMessageClick = (event, message) => {
+    if (message.senderId !== currentUser.uid) {
+      setAnchorEl(event.currentTarget); // Set the anchor for the menu to the clicked message
+      setSelectedMessageId(message.messageId); // Track the selected message's ID
+    }
+  };
+
+  // Close the popup menu
+  const handleCloseMenu = () => {
+    setAnchorEl(null);
+    setSelectedMessageId(null); // Reset the selected message ID when menu closes
+  };
+
+  // Handle option selection from the popup menu
+  const handleMenuOption = (option) => {
+    if (option === 'regenerate') {
+      // Regenerate translation logic here
+      console.log("Regenerate Translation for:", selectedMessageId);
+    } else if (option === 'showOriginal') {
+      // Show original message logic here
+      console.log("Show Original Message for:", selectedMessageId);
+    }
+    handleCloseMenu(); // Close the menu after an option is selected
+  };
+
   return (
     <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f5f7fb' }}>
       {chatUser && (
@@ -147,17 +176,22 @@ const ChatArea = ({ currentUser, chatUser }) => {
             key={index}
             justifyContent={msg.senderId === currentUser.uid ? 'flex-end' : 'flex-start'} // Align right or left
             sx={{ mb: 2 }}
+            onClick={(e) => handleMessageClick(e, msg)} // Add click handler for each message
           >
             {msg.senderId !== currentUser.uid && (
               <Grid item>
-                <Avatar src={chatUser.profileImageUrl} />
-              </Grid>
+              <Avatar 
+                src={chatUser.profileImageUrl} 
+                sx={{ alignSelf: 'flex-end' }}  // This will move the avatar dynamically to the bottom of the message
+              />
+            </Grid>
+            
             )}
             <Grid item xs={8} md={6} lg={5}>
               <Box
                 sx={{
                   p: 2,
-                  backgroundColor: msg.senderId === currentUser.uid ? '#007aff' : '#e5e7eb',
+                  backgroundColor: msg.messageId === selectedMessageId ? '#d1c4e9' : msg.senderId === currentUser.uid ? '#AD49E1' : '#E5D9F2',
                   color: msg.senderId === currentUser.uid ? '#fff' : '#333',
                   borderRadius: '16px',
                   boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
@@ -172,8 +206,8 @@ const ChatArea = ({ currentUser, chatUser }) => {
                     right: msg.senderId === currentUser.uid ? 10 : 'auto',
                     width: 0,
                     height: 0,
-                    borderTop: '8px solid',
-                    borderTopColor: msg.senderId === currentUser.uid ? '#007aff' : '#e5e7eb',
+                    borderTop: '9px solid',
+                    borderTopColor: msg.senderId === currentUser.uid ? '#AD49E1' : '#E5D9F2',
                     borderLeft: '8px solid transparent',
                     borderRight: '8px solid transparent'
                   }
@@ -192,6 +226,56 @@ const ChatArea = ({ currentUser, chatUser }) => {
         {/* Dummy div to always scroll to */}
         <div ref={messagesEndRef} />
       </Box>
+
+      {/* Popup Menu for clicked message */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleCloseMenu}
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'center',
+          horizontal: 'left',
+        }}
+        sx={{
+          '& .MuiPaper-root': {
+            backgroundColor: '#CDC1FF', // Background color of the menu
+            borderRadius: 2, // Rounded corners
+            boxShadow: '0px 3px 8px rgba(0, 0, 0, 0.2)', // Custom shadow
+            minWidth: 180, // Set a minimum width for the menu
+            border: '1px solid #ddd', // Add a light border
+          },
+        }}
+      >
+        <MenuItem
+          onClick={() => handleMenuOption('regenerate')}
+          sx={{
+            fontSize: '14px',
+            padding: '8px 16px', // Custom padding
+            '&:hover': {
+              backgroundColor: '#FFE1FF', // Light hover effect
+            },
+          }}
+        >
+          Regenerate Translation
+        </MenuItem>
+        <MenuItem
+          onClick={() => handleMenuOption('showOriginal')}
+          sx={{
+            fontSize: '14px',
+            padding: '8px 16px', // Custom padding
+            '&:hover': {
+              backgroundColor: '#FFE1FF', // Light hover effect
+            },
+          }}
+        >
+          Show Original Message
+        </MenuItem>
+      </Menu>
+
 
       {/* Chatbox and Send Button */}
       <Box
@@ -229,20 +313,17 @@ const ChatArea = ({ currentUser, chatUser }) => {
             },
           }}
         />
-        <Button 
-          variant="contained" 
+        <IconButton 
+          color="primary" 
           onClick={handleSendMessage}
           sx={{ 
-            backgroundColor: '#007aff', 
+            backgroundColor: '#8967B3', 
             color: '#fff',
-            px: 3, 
-            py: 1, 
-            borderRadius: 2, 
-            '&:hover': { backgroundColor: '#005bb5' },
+            '&:hover': { backgroundColor: '#7A1CAC' },
           }}
         >
-          Send
-        </Button>
+          <SendIcon /> {/* Replacing text with icon */}
+        </IconButton>
       </Box>
     </Box>
   );
