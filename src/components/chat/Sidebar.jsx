@@ -271,11 +271,15 @@ const Sidebar = ({ currentUser, selectChatUser, handleLogout }) => {
             }}
           >
             <Typography variant="body1" color="text.secondary" gutterBottom>
-              {filter === 'recent' ? "You don't have any contacts." : "No users found."}
+              {searchQuery.trim() 
+                ? "No users found matching your search."
+                : filter === 'recent' 
+                  ? "You don't have any recent conversations." 
+                  : "No users available."}
             </Typography>
-            {filter === 'recent' && (
+            {!searchQuery.trim() && filter === 'recent' && (
               <Typography variant="body2" color="text.secondary">
-                Tip: Use the search box or click "All Users" to connect with people.
+                Tip: Use the search box or click "All Users" to find people to chat with.
               </Typography>
             )}
           </Box>
