@@ -1,11 +1,13 @@
 import React, { useState } from "react";
+import { TextField, Button, Container, Typography, Box, Link as MuiLink } from "@mui/material";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail, signOut } from "firebase/auth";
 import { ref, set } from "firebase/database";
-import { TextField, Button, Container, Typography, Box } from "@mui/material";
 import { auth, database } from "../../firebaseConfig";
-import { useNavigate } from "react-router-dom";
+import PageTransition from "../PageTransition";
 
 const Register = () => {
+  console.log("Register component rendered");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -91,146 +93,151 @@ const Register = () => {
   };
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        minHeight: "100vh",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "#F9F3D7", // Pale Yellow background
-      }}
-    >
-      <Container
-        maxWidth="xs"
+      <Box
         sx={{
-          p: 4,
-          boxShadow: 3,
-          backgroundColor: "#fff",
-          borderRadius: 2,
+          display: "flex",
+          minHeight: "100vh",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#E5D9F2",
         }}
       >
-        <Box
-          component="form"
-          onSubmit={handleRegister}
-          sx={{ display: "flex", flexDirection: "column", gap: 3 }}
+        <Container
+          maxWidth="xs"
+          sx={{
+            p: 4,
+            boxShadow: 3,
+            backgroundColor: "#fff",
+            borderRadius: 2,
+          }}
         >
-          <Typography variant="h4" textAlign="center" gutterBottom color="#7E5A9B">
-            Register
-          </Typography>
-
-          <TextField
-            label="Email"
-            variant="outlined"
-            fullWidth
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            error={Boolean(emailError)}
-            helperText={emailError || ""}
-            required
-            sx={{ 
-              boxShadow: 1, 
-              borderRadius: 1,
-              '& .MuiOutlinedInput-root': {
-                '& fieldset': {
-                  borderColor: '#9D7BB0',
-                },
-                '&:hover fieldset': {
-                  borderColor: '#7E5A9B',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: '#7E5A9B',
-                },
-              },
-            }}
-          />
-
-          <TextField
-            label="Password"
-            type="password"
-            variant="outlined"
-            fullWidth
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            error={Boolean(passwordError)}
-            helperText={passwordError || ""}
-            required
-            sx={{ 
-              boxShadow: 1, 
-              borderRadius: 1,
-              '& .MuiOutlinedInput-root': {
-                '& fieldset': {
-                  borderColor: '#9D7BB0',
-                },
-                '&:hover fieldset': {
-                  borderColor: '#7E5A9B',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: '#7E5A9B',
-                },
-              },
-            }}
-          />
-
-          <TextField
-            label="Confirm Password"
-            type="password"
-            variant="outlined"
-            fullWidth
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            error={Boolean(confirmPasswordError)}
-            helperText={confirmPasswordError || ""}
-            required
-            sx={{ 
-              boxShadow: 1, 
-              borderRadius: 1,
-              '& .MuiOutlinedInput-root': {
-                '& fieldset': {
-                  borderColor: '#9D7BB0',
-                },
-                '&:hover fieldset': {
-                  borderColor: '#7E5A9B',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: '#7E5A9B',
-                },
-              },
-            }}
-          />
-
-          <Button
-            type="submit"
-            variant="contained"
-            fullWidth
-            size="large"
-            sx={{
-              py: 1.5,
-              backgroundColor: "#7E5A9B",
-              color: "white",
-              "&:hover": { backgroundColor: "#9D7BB0" },
-            }}
-            disabled={isCheckingEmail} // Disable button while checking email
+          
+    <PageTransition>
+          <Box
+            component="form"
+            onSubmit={handleRegister}
+            sx={{ display: "flex", flexDirection: "column", gap: 3 }}
           >
-            {isCheckingEmail ? "Checking..." : "Register"}
-          </Button>
+            <Typography variant="h4" textAlign="center" gutterBottom color="#7E5A9B">
+              Register
+            </Typography>
 
-          <Button
-            href="/login"
-            variant="outlined"
-            fullWidth
-            size="large"
-            sx={{
-              py: 1.5,
-              borderColor: "#9D7BB0",
-              color: "#7E5A9B",
-              "&:hover": { backgroundColor: "#E0B1CB", borderColor: "#7E5A9B" },
-            }}
-          >
-            Login
-          </Button>
-        </Box>
-      </Container>
-    </Box>
+            <TextField
+              label="Email"
+              variant="outlined"
+              fullWidth
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              error={Boolean(emailError)}
+              helperText={emailError || ""}
+              required
+              sx={{ 
+                boxShadow: 1, 
+                borderRadius: 1,
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': {
+                    borderColor: '#9D7BB0',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#7E5A9B',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#7E5A9B',
+                  },
+                },
+              }}
+            />
+
+            <TextField
+              label="Password"
+              type="password"
+              variant="outlined"
+              fullWidth
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              error={Boolean(passwordError)}
+              helperText={passwordError || ""}
+              required
+              sx={{ 
+                boxShadow: 1, 
+                borderRadius: 1,
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': {
+                    borderColor: '#9D7BB0',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#7E5A9B',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#7E5A9B',
+                  },
+                },
+              }}
+            />
+
+            <TextField
+              label="Confirm Password"
+              type="password"
+              variant="outlined"
+              fullWidth
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              error={Boolean(confirmPasswordError)}
+              helperText={confirmPasswordError || ""}
+              required
+              sx={{ 
+                boxShadow: 1, 
+                borderRadius: 1,
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': {
+                    borderColor: '#9D7BB0',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#7E5A9B',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#7E5A9B',
+                  },
+                },
+              }}
+            />
+
+            <Button
+              type="submit"
+              variant="contained"
+              fullWidth
+              size="large"
+              disabled={isCheckingEmail}
+              sx={{
+                py: 1.5,
+                backgroundColor: "#7E5A9B",
+                color: "white",
+                "&:hover": { backgroundColor: "#9D7BB0" },
+              }}
+            >
+              {isCheckingEmail ? "Registering..." : "Register"}
+            </Button>
+
+            <Button
+              component={RouterLink}
+              to="/login"
+              variant="outlined"
+              fullWidth
+              size="large"
+              sx={{
+                py: 1.5,
+                borderColor: "#9D7BB0",
+                color: "#7E5A9B",
+                "&:hover": { backgroundColor: "#E0B1CB", borderColor: "#7E5A9B" },
+              }}
+            >
+              Back to Login
+            </Button>
+          </Box>
+          
+    </PageTransition>
+        </Container>
+      </Box>
   );
 };
 
