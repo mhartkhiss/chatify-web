@@ -9,6 +9,7 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [openSnackbar, setOpenSnackbar] = useState(false); // For showing snackbar
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const navigate = useNavigate(); // Initialize useNavigate
 
   // Check if registration success flag exists in sessionStorage
@@ -22,6 +23,7 @@ const Login = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setIsLoggingIn(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -29,6 +31,8 @@ const Login = () => {
       navigate('/chat'); // Redirect to chat page
     } catch (err) {
       setError(err.message);
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -44,7 +48,7 @@ const Login = () => {
         minHeight: "100vh",
         alignItems: "center",
         justifyContent: "center",
-        background: "linear-gradient(135deg, #ece9e6 0%, #ffffff 100%)",
+        background: "#E5D9F2", // Pale Yellow background
       }}
     >
       <Container
@@ -61,7 +65,7 @@ const Login = () => {
           onSubmit={handleLogin}
           sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}
         >
-          <Typography variant="h4" textAlign="center" gutterBottom>
+          <Typography variant="h4" textAlign="center" gutterBottom color="#7E5A9B">
             Login
           </Typography>
           {error && <Typography color="error">{error}</Typography>}
@@ -72,7 +76,21 @@ const Login = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            sx={{ boxShadow: 1, borderRadius: 1 }}
+            sx={{
+              boxShadow: 1,
+              borderRadius: 1,
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: '#9D7BB0',
+                },
+                '&:hover fieldset': {
+                  borderColor: '#7E5A9B',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#7E5A9B',
+                },
+              },
+            }}
           />
           <TextField
             label="Password"
@@ -82,21 +100,36 @@ const Login = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            sx={{ boxShadow: 1, borderRadius: 1 }}
+            sx={{
+              boxShadow: 1,
+              borderRadius: 1,
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: '#9D7BB0',
+                },
+                '&:hover fieldset': {
+                  borderColor: '#7E5A9B',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#7E5A9B',
+                },
+              },
+            }}
           />
           <Button
             type="submit"
             variant="contained"
             fullWidth
             size="large"
+            disabled={isLoggingIn}
             sx={{
               py: 1.5,
-              background: "linear-gradient(90deg, #4a90e2, #007aff)",
+              backgroundColor: "#7E5A9B",
               color: "white",
-              "&:hover": { backgroundColor: "#007aff" },
+              "&:hover": { backgroundColor: "#9D7BB0" },
             }}
           >
-            Login
+            {isLoggingIn ? "Logging in..." : "Login"}
           </Button>
           <Button
             href="/register"
@@ -105,9 +138,9 @@ const Login = () => {
             size="large"
             sx={{
               py: 1.5,
-              borderColor: "#007aff",
-              color: "#007aff",
-              "&:hover": { backgroundColor: "#e3f2fd", borderColor: "#007aff" },
+              borderColor: "#9D7BB0",
+              color: "#7E5A9B",
+              "&:hover": { backgroundColor: "#E0B1CB", borderColor: "#7E5A9B" },
             }}
           >
             Register
@@ -117,7 +150,7 @@ const Login = () => {
             component="button"
             variant="body2"
             onClick={handleForgotPassword}
-            sx={{ textAlign: "center", mt: 2 }}
+            sx={{ textAlign: "center", mt: 2, color: "#7E5A9B" }}
           >
             Forgot Password?
           </Link>
@@ -131,7 +164,7 @@ const Login = () => {
           onClose={() => setOpenSnackbar(false)}
         >
           <Alert onClose={() => setOpenSnackbar(false)} severity="success" sx={{ width: '100%' }}>
-            Registration Success!
+            Registration successful! Please log in.
           </Alert>
         </Snackbar>
       </Container>

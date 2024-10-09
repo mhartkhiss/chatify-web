@@ -3,6 +3,7 @@ import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail, signOut } f
 import { ref, set } from "firebase/database";
 import { TextField, Button, Container, Typography, Box } from "@mui/material";
 import { auth, database } from "../../firebaseConfig";
+import { useNavigate } from "react-router-dom";
 
 const Register = () => {
   const [email, setEmail] = useState("");
@@ -12,6 +13,7 @@ const Register = () => {
   const [passwordError, setPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const navigate = useNavigate();
 
   // Function to handle registration
   const handleRegister = async (e) => {
@@ -63,14 +65,14 @@ const Register = () => {
           const userRef = ref(database, `users/${user.uid}`);
           await set(userRef, userData);
 
+          // Sign out the user immediately after registration
+          await signOut(auth);
+
           // Set registration success flag in sessionStorage
           sessionStorage.setItem("registered", "true");
 
-          // Sign out the user after registration
-          await signOut(auth);
-
           // Redirect to login page
-          window.location.href = "/login";
+          navigate("/login");
         } catch (registrationError) {
           // Handle Firebase auth-specific errors
           if (registrationError.code === "auth/email-already-in-use") {
@@ -95,7 +97,7 @@ const Register = () => {
         minHeight: "100vh",
         alignItems: "center",
         justifyContent: "center",
-        background: "linear-gradient(135deg, #ece9e6 0%, #ffffff 100%)",
+        background: "#F9F3D7", // Pale Yellow background
       }}
     >
       <Container
@@ -112,7 +114,7 @@ const Register = () => {
           onSubmit={handleRegister}
           sx={{ display: "flex", flexDirection: "column", gap: 3 }}
         >
-          <Typography variant="h4" textAlign="center" gutterBottom>
+          <Typography variant="h4" textAlign="center" gutterBottom color="#7E5A9B">
             Register
           </Typography>
 
@@ -125,7 +127,21 @@ const Register = () => {
             error={Boolean(emailError)}
             helperText={emailError || ""}
             required
-            sx={{ boxShadow: 1, borderRadius: 1 }}
+            sx={{ 
+              boxShadow: 1, 
+              borderRadius: 1,
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: '#9D7BB0',
+                },
+                '&:hover fieldset': {
+                  borderColor: '#7E5A9B',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#7E5A9B',
+                },
+              },
+            }}
           />
 
           <TextField
@@ -138,7 +154,21 @@ const Register = () => {
             error={Boolean(passwordError)}
             helperText={passwordError || ""}
             required
-            sx={{ boxShadow: 1, borderRadius: 1 }}
+            sx={{ 
+              boxShadow: 1, 
+              borderRadius: 1,
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: '#9D7BB0',
+                },
+                '&:hover fieldset': {
+                  borderColor: '#7E5A9B',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#7E5A9B',
+                },
+              },
+            }}
           />
 
           <TextField
@@ -151,7 +181,21 @@ const Register = () => {
             error={Boolean(confirmPasswordError)}
             helperText={confirmPasswordError || ""}
             required
-            sx={{ boxShadow: 1, borderRadius: 1 }}
+            sx={{ 
+              boxShadow: 1, 
+              borderRadius: 1,
+              '& .MuiOutlinedInput-root': {
+                '& fieldset': {
+                  borderColor: '#9D7BB0',
+                },
+                '&:hover fieldset': {
+                  borderColor: '#7E5A9B',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#7E5A9B',
+                },
+              },
+            }}
           />
 
           <Button
@@ -161,9 +205,9 @@ const Register = () => {
             size="large"
             sx={{
               py: 1.5,
-              background: "linear-gradient(90deg, #4a90e2, #007aff)",
+              backgroundColor: "#7E5A9B",
               color: "white",
-              "&:hover": { backgroundColor: "#007aff" },
+              "&:hover": { backgroundColor: "#9D7BB0" },
             }}
             disabled={isCheckingEmail} // Disable button while checking email
           >
@@ -177,9 +221,9 @@ const Register = () => {
             size="large"
             sx={{
               py: 1.5,
-              borderColor: "#007aff",
-              color: "#007aff",
-              "&:hover": { backgroundColor: "#e3f2fd", borderColor: "#007aff" },
+              borderColor: "#9D7BB0",
+              color: "#7E5A9B",
+              "&:hover": { backgroundColor: "#E0B1CB", borderColor: "#7E5A9B" },
             }}
           >
             Login

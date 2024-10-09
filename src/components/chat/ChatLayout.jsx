@@ -3,7 +3,7 @@ import { Box } from '@mui/material';
 import Sidebar from './Sidebar';
 import ChatArea from './ChatArea';
 
-const ChatLayout = ({ currentUser }) => {
+const ChatLayout = ({ currentUser, userData, conversations, handleLogout }) => {
   const [chatUser, setChatUser] = useState(null);
 
   // Handle selecting a user from the sidebar

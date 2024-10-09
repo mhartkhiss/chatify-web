@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Typography, Avatar, Grid, TextField, Button, Menu, MenuItem, IconButton } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import { getDatabase, ref, onValue, push, set, serverTimestamp, off } from "firebase/database";
@@ -10,26 +10,19 @@ const ChatArea = ({ currentUser, chatUser }) => {
   const [selectedMessageId, setSelectedMessageId] = useState(null);
   const messagesEndRef = useRef(null);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, []);
 
   useEffect(() => {
     if (chatUser) {
       const db = getDatabase();
-      const chatId = currentUser.uid < chatUser.userId 
-        ? `${currentUser.uid}_${chatUser.userId}` 
-        : `${chatUser.userId}_${currentUser.uid}`;
+      const chatId = [currentUser.uid, chatUser.userId].sort().join('_');
       const messagesRef = ref(db, `messages/${chatId}`);
 
       const unsubscribe = onValue(messagesRef, (snapshot) => {
         const data = snapshot.val();
-        if (data) {
-          const messageList = Object.values(data);
-          setMessages(messageList);
-        } else {
-          setMessages([]);
-        }
+        setMessages(data ? Object.values(data) : []);
       });
 
       return () => off(messagesRef);
@@ -38,16 +31,13 @@ const ChatArea = ({ currentUser, chatUser }) => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToBottom]);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = useCallback(() => {
     if (newMessage.trim() === '') return;
 
     const db = getDatabase();
-    const chatId = currentUser.uid < chatUser.userId 
-      ? `${currentUser.uid}_${chatUser.userId}` 
-      : `${chatUser.userId}_${currentUser.uid}`;
-
+    const chatId = [currentUser.uid, chatUser.userId].sort().join('_');
     const messagesRef = ref(db, `messages/${chatId}`);
     const newMessageRef = push(messagesRef);
 
@@ -61,7 +51,7 @@ const ChatArea = ({ currentUser, chatUser }) => {
 
     set(newMessageRef, messageData);
     setNewMessage('');
-  };
+  }, [newMessage, currentUser.uid, chatUser.userId]);
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
@@ -310,4 +300,4 @@ const ChatArea = ({ currentUser, chatUser }) => {
   );
 };
 
-export default ChatArea;
+export default React.memo(ChatArea);

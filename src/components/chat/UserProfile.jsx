@@ -122,7 +122,6 @@ const UserProfile = ({ currentUser }) => {
   const handleLogout = async () => {
     try {
       await auth.signOut();
-      window.location.href = '/login';
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -248,7 +247,7 @@ const UserProfile = ({ currentUser }) => {
         }}
       >
         <Box sx={{ p: 2, minWidth: 250 }}><TextField placeholder='Search language...' variant='outlined' size='small' fullWidth sx={{ mb: 1 }} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /><List sx={{ maxHeight: 200, overflow: 'auto', border: '1px solid #ccc', borderRadius: '4px' }}>
-          {['English', 'Spanish', 'French', 'German', 'Chinese', 'Japanese', 'Russian', 'Italian', 'Portuguese', 'Hindi', 'Arabic', 'Korean', 'Dutch', 'Swedish', 'Greek', 'Turkish', 'Hebrew', 'Vietnamese', 'Thai', 'Indonesian', 'Danish', 'Finnish', 'Polish', 'Norwegian', 'Czech', 'Hungarian', 'Ukrainian', 'Malay', 'Romanian'].filter((language) => language.toLowerCase().includes(searchTerm.toLowerCase())).map((language) => (
+          {['English', 'Tagalog', 'Bisaya', 'Spanish', 'French', 'German', 'Chinese', 'Japanese', 'Russian', 'Italian', 'Portuguese', 'Hindi', 'Arabic', 'Korean', 'Dutch', 'Swedish', 'Greek', 'Turkish', 'Hebrew', 'Vietnamese', 'Thai', 'Indonesian', 'Danish', 'Finnish', 'Polish', 'Norwegian', 'Czech', 'Hungarian', 'Ukrainian', 'Malay', 'Romanian'].filter((language) => language.toLowerCase().includes(searchTerm.toLowerCase())).map((language) => (
             <ListItem key={language} disablePadding>
               <ListItemButton onClick={() => handleLanguageSelect(language)}>
                 {language}
