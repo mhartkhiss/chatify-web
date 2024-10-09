@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Box, CircularProgress } from '@mui/material';
+import { Box } from '@mui/material';
 import { getDatabase, ref, get } from 'firebase/database';
 import ChatLayout from './ChatLayout';
+import chatifyLogo from '../../assets/chatifylogo.png';
 
 const ChatPage = ({ currentUser, handleLogout }) => {
   const [isLoading, setIsLoading] = useState(true);
@@ -45,7 +46,7 @@ const ChatPage = ({ currentUser, handleLogout }) => {
   if (isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <CircularProgress />
+        <img src={chatifyLogo} alt="Chatify Logo" style={{ width: '250px', height: 'auto' }} />
       </Box>
     );
   }

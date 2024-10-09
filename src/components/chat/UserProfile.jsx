@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Avatar, IconButton, Button, Dialog, DialogActions, DialogContent, LinearProgress, TextField, Popover, List, ListItem, ListItemButton } from '@mui/material';
+import { Box, Typography, Avatar, IconButton, Button, Dialog, DialogActions, DialogContent, LinearProgress, TextField, Popover, List, ListItem, ListItemButton, useMediaQuery, useTheme } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { auth, database, storage } from '../../firebaseConfig'; // Firebase imports
@@ -26,6 +26,8 @@ const UserProfile = ({ currentUser }) => {
   const [oldAvatarUrl, setOldAvatarUrl] = useState(''); // Store the old avatar URL
   const [anchorEl, setAnchorEl] = useState(null);
   const [searchTerm, setSearchTerm] = useState(''); // Anchor element for language popover
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   useEffect(() => {
     const userRef = ref(database, `users/${currentUser.uid}`);
@@ -161,7 +163,8 @@ const UserProfile = ({ currentUser }) => {
   return (
     <Box sx={{
       display: 'flex',
-      alignItems: 'center',
+      flexDirection: isMobile ? 'column' : 'row',
+      alignItems: isMobile ? 'flex-start' : 'center',
       justifyContent: 'space-between',
       p: 1.5,
       borderRadius: '5px',
@@ -169,7 +172,12 @@ const UserProfile = ({ currentUser }) => {
       color: '#fff',
       borderTop: '1px solid #23272A'
     }}>
-      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        width: isMobile ? '100%' : 'auto',
+        marginBottom: isMobile ? 2 : 0
+      }}>
         <Box sx={{ position: 'relative', mr: 2 }}>
           <input
             accept="image/*"
@@ -198,7 +206,7 @@ const UserProfile = ({ currentUser }) => {
             }}
           />
         </Box>
-        <Box>
+        <Box sx={{ flexGrow: 1 }}>
           {editingUsername ? (
             <TextField
               value={newUsername}
@@ -224,7 +232,12 @@ const UserProfile = ({ currentUser }) => {
           )}
           <Typography
             variant="caption"
-            sx={{ color: '#b9bbbe', cursor: 'pointer' }}
+            sx={{ 
+              color: '#b9bbbe', 
+              cursor: 'pointer',
+              display: 'block',  // Ensure it's on a new line
+              wordBreak: 'break-word'  // Allow long emails to wrap
+            }}
             onClick={handleLanguageDoubleClick}
           >
             {userData.language || currentUser.email}
@@ -308,7 +321,13 @@ const UserProfile = ({ currentUser }) => {
         </Box>
       )}
 
-      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center',
+        width: isMobile ? '100%' : 'auto',
+        justifyContent: isMobile ? 'flex-end' : 'flex-start',
+        marginTop: isMobile ? 2 : 0
+      }}>
         <IconButton sx={{ color: '#b9bbbe' }} onClick={handleLogout}>
           <LogoutIcon />
         </IconButton>

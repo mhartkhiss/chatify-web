@@ -5,6 +5,7 @@ import { createUserWithEmailAndPassword, fetchSignInMethodsForEmail, signOut } f
 import { ref, set } from "firebase/database";
 import { auth, database } from "../../firebaseConfig";
 import PageTransition from "../PageTransition";
+import AuthBackground from "../AuthBackground";
 
 const Register = () => {
   console.log("Register component rendered");
@@ -93,34 +94,24 @@ const Register = () => {
   };
 
   return (
-      <Box
+    <AuthBackground label="Sign up"> 
+      <Container
+        maxWidth="xs"
         sx={{
-          display: "flex",
-          minHeight: "100vh",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#E5D9F2",
+          pt: 4,  // Reduced top padding
+          pb: 4,
+          px: 4,
+          boxShadow: 3,
+          backgroundColor: "rgba(255, 255, 255, 0.8)",
+          borderRadius: 2,
         }}
       >
-        <Container
-          maxWidth="xs"
-          sx={{
-            p: 4,
-            boxShadow: 3,
-            backgroundColor: "#fff",
-            borderRadius: 2,
-          }}
-        >
-          
-    <PageTransition>
+        <PageTransition>
           <Box
             component="form"
             onSubmit={handleRegister}
             sx={{ display: "flex", flexDirection: "column", gap: 3 }}
           >
-            <Typography variant="h4" textAlign="center" gutterBottom color="#7E5A9B">
-              Register
-            </Typography>
 
             <TextField
               label="Email"
@@ -215,7 +206,7 @@ const Register = () => {
                 "&:hover": { backgroundColor: "#9D7BB0" },
               }}
             >
-              {isCheckingEmail ? "Registering..." : "Register"}
+              {isCheckingEmail ? "Signing up..." : "Sign up"} 
             </Button>
 
             <Button
@@ -235,9 +226,9 @@ const Register = () => {
             </Button>
           </Box>
           
-    </PageTransition>
-        </Container>
-      </Box>
+        </PageTransition>
+      </Container>
+    </AuthBackground>
   );
 };
 

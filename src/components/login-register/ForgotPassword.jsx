@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { sendPasswordResetEmail } from "firebase/auth"; // Firebase function for password reset
-import { TextField, Button, Container, Typography, Box, Alert, Link as MuiLink } from "@mui/material";
+import { TextField, Button, Container, Box, Alert } from "@mui/material";
 import { auth } from "../../firebaseConfig";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
 import PageTransition from "../PageTransition";
+import AuthBackground from "../AuthBackground";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -43,35 +44,24 @@ const ForgotPassword = () => {
   };
 
   return (
-      <Box
+    <AuthBackground label="Forgot Password" labelVariant="h6" showLogo={false} labelAlign="center">
+      <Container
+        maxWidth="xs"
         sx={{
-          display: "flex",
-          minHeight: "100vh",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#E5D9F2", // Pale Yellow background
+          pt: 4,  // Reduced top padding
+          pb: 4,
+          px: 4,
+          boxShadow: 3,
+          backgroundColor: "rgba(255, 255, 255, 0.8)",
+          borderRadius: 2,
         }}
       >
-        
-        <Container
-          maxWidth="xs"
-          sx={{
-            p: 4,
-            boxShadow: 3,
-            backgroundColor: "#fff",
-            borderRadius: 2,
-          }}
-        >
-          
-      <PageTransition>
+        <PageTransition>
           <Box
             component="form"
             onSubmit={handlePasswordReset}
             sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}
           >
-            <Typography variant="h4" textAlign="center" gutterBottom color="#7E5A9B">
-              Forgot Password
-            </Typography>
             {message && <Alert severity="info">{message}</Alert>}
             {error && <Alert severity="error">{error}</Alert>}
             <TextField
@@ -129,9 +119,9 @@ const ForgotPassword = () => {
               Back to Login
             </Button>
           </Box>
-          </PageTransition>
-        </Container>
-      </Box>
+        </PageTransition>
+      </Container>
+    </AuthBackground>
   );
 };
 

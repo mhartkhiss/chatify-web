@@ -4,6 +4,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
 import { auth } from "../../firebaseConfig";
 import PageTransition from "../PageTransition";
+import AuthBackground from "../AuthBackground";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -43,34 +44,24 @@ const Login = () => {
   };
 
   return (
-      <Box
+    <AuthBackground label="Login">
+      <Container
+        maxWidth="xs"
         sx={{
-          display: "flex",
-          minHeight: "100vh",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#E5D9F2", // Pale Yellow background
+          pt: 4,  // Reduced top padding
+          pb: 4,
+          px: 4,
+          boxShadow: 3,
+          backgroundColor: "rgba(255, 255, 255, 0.8)",
+          borderRadius: 2,
         }}
       >
-        <Container
-          maxWidth="xs"
-          sx={{
-            p: 4,
-            boxShadow: 3,
-            backgroundColor: "#fff",
-            borderRadius: 2,
-          }}
-        >
-          
-    <PageTransition>
+        <PageTransition>
           <Box
             component="form"
             onSubmit={handleLogin}
             sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}
           >
-            <Typography variant="h4" textAlign="center" gutterBottom color="#7E5A9B">
-              Login
-            </Typography>
             {error && <Typography color="error">{error}</Typography>}
             <TextField
               label="Email"
@@ -147,7 +138,7 @@ const Login = () => {
                 "&:hover": { backgroundColor: "#E0B1CB", borderColor: "#7E5A9B" },
               }}
             >
-              Register
+              Sign up
             </Button>
 
             <MuiLink
@@ -159,22 +150,21 @@ const Login = () => {
               Forgot Password?
             </MuiLink>
           </Box>
-          
-    </PageTransition>
-        </Container>
+        </PageTransition>
+      </Container>
 
-        {/* Snackbar remains outside PageTransition */}
-        <Snackbar
-          open={openSnackbar}
-          autoHideDuration={5000} // Show for 5 seconds
-          anchorOrigin={{ vertical: "top", horizontal: "center" }}
-          onClose={() => setOpenSnackbar(false)}
-        >
-          <Alert onClose={() => setOpenSnackbar(false)} severity="success" sx={{ width: '100%' }}>
-            Registration successful! Please log in.
-          </Alert>
-        </Snackbar>
-      </Box>
+      {/* Snackbar remains outside PageTransition */}
+      <Snackbar
+        open={openSnackbar}
+        autoHideDuration={5000} // Show for 5 seconds
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        onClose={() => setOpenSnackbar(false)}
+      >
+        <Alert onClose={() => setOpenSnackbar(false)} severity="success" sx={{ width: '100%' }}>
+          Sign up successful! Please log in.  {/* Changed from "Registration successful!" */}
+        </Alert>
+      </Snackbar>
+    </AuthBackground>
   );
 };
 
