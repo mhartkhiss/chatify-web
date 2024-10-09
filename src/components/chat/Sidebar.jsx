@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Box, List, ListItem, ListItemText, Avatar, ListItemAvatar, Typography, Badge, Button, ButtonGroup } from '@mui/material';
+import { Box, List, ListItem, ListItemText, Avatar, ListItemAvatar, Typography, Badge, Button, ButtonGroup, Divider } from '@mui/material';
 import { getDatabase, ref, onValue, update } from 'firebase/database';
 import SearchBar from './SearchBar';
 import UserProfile from './UserProfile';
+import { MessageOutlined, PeopleOutline } from '@mui/icons-material';
 
 const Sidebar = ({ currentUser, selectChatUser, handleLogout }) => {
   const [users, setUsers] = useState([]);
@@ -135,8 +136,11 @@ const Sidebar = ({ currentUser, selectChatUser, handleLogout }) => {
         display: 'flex',
         flexDirection: 'column',
         backgroundColor: '#f7f9fc',
-        borderRight: '1px solid #ddd',
+        borderRight: '1px solid #e0e0e0',
         position: 'relative',
+        boxShadow: '0px 0px 10px rgba(0, 0, 0, 0.1)',
+        width: '350px', // Increased from 320px to 350px
+        minWidth: '300px', // Increased from 280px to 300px
       }}
     >
       {/* Search Bar */} 
@@ -145,24 +149,28 @@ const Sidebar = ({ currentUser, selectChatUser, handleLogout }) => {
           position: 'sticky',
           top: 0,
           zIndex: 1,
-          backgroundColor: '#f7f9fc',
-          p: 2,
-          borderBottom: '1px solid #ddd',
+          backgroundColor: '#ffffff',
+          p: 1, // Reduced padding
+          borderBottom: '1px solid #e0e0e0',
         }}
       >
         <SearchBar onSearch={handleSearch} />
         {/* Filter buttons */}
-        <ButtonGroup fullWidth size="small" sx={{ mt: 1 }}>
+        <ButtonGroup fullWidth size="small" sx={{ mt: 1 }}> {/* Reduced top margin */}
           <Button
             variant={filter === 'recent' ? 'contained' : 'outlined'}
             onClick={() => setFilter('recent')}
+            startIcon={<MessageOutlined />}
             sx={{
-              backgroundColor: filter === 'recent' ? '#AD49E1' : '#E5D9F2',
-              color: '#fff',
-              border: 'none', // Remove border
+              backgroundColor: filter === 'recent' ? '#AD49E1' : 'transparent',
+              color: filter === 'recent' ? '#fff' : '#AD49E1',
+              border: '1px solid #AD49E1',
               '&:hover': {
                 backgroundColor: '#9600ce',
+                color: '#fff',
               },
+              fontSize: '0.8rem', // Smaller font size
+              padding: '4px 8px', // Reduced padding
             }}
           >
             Recent
@@ -170,16 +178,20 @@ const Sidebar = ({ currentUser, selectChatUser, handleLogout }) => {
           <Button
             variant={filter === 'all' ? 'contained' : 'outlined'}
             onClick={() => setFilter('all')}
+            startIcon={<PeopleOutline />}
             sx={{
-              backgroundColor: filter === 'all' ? '#AD49E1' : '#E5D9F2',
-              color: '#fff',
-              border: 'none', // Remove border
+              backgroundColor: filter === 'all' ? '#AD49E1' : 'transparent',
+              color: filter === 'all' ? '#fff' : '#AD49E1',
+              border: '1px solid #AD49E1',
               '&:hover': {
                 backgroundColor: '#9600ce',
+                color: '#fff',
               },
+              fontSize: '0.8rem', // Smaller font size
+              padding: '4px 8px', // Reduced padding
             }}
           >
-            Show All Users
+            All Users
           </Button>
         </ButtonGroup>
       </Box>
@@ -189,42 +201,85 @@ const Sidebar = ({ currentUser, selectChatUser, handleLogout }) => {
         sx={{
           flexGrow: 1,
           overflowY: 'auto',
+          overflowX: 'hidden', // Hide horizontal scrollbar
+          backgroundColor: '#ffffff',
         }}
       >
-        <List>
-          {filteredUsers.map(user => (
-            <ListItem
-              key={user.userId}
-              button
-              onClick={() => handleUserSelect(user)}
-              sx={{
-                backgroundColor: user.userId === selectedUserId ? '#E5D9F2' : 'transparent', borderRadius: '5px', // Highlight selected user
-                '&:hover': {
-                  backgroundColor: user.userId === selectedUserId ? '#E5D9F2' : '#f0f0f0',
-                },
-              }}
-            >
-              <ListItemAvatar>
-                <Avatar src={user.profileImageUrl} />
-              </ListItemAvatar>
-              <ListItemText
-                primary={
-                  <Typography sx={{ fontWeight: unreadMessages[user.userId]?.hasUnread ? 'bold' : 'normal' }}>
-                    {user.username}
-                  </Typography>
-                }
-                secondary={lastMessages[user.userId] ? truncateMessage(lastMessages[user.userId]) : user.email}
-              />
-              {unreadMessages[user.userId]?.unreadCount > 0 && (
-                <Badge
-                  badgeContent={unreadMessages[user.userId].unreadCount}
-                  color="primary"
-                  sx={{ ml: 2 }}
-                />
-              )}
-            </ListItem>
-          ))}
-        </List>
+        {filteredUsers.length > 0 ? (
+          <List>
+            {filteredUsers.map((user, index) => (
+              <React.Fragment key={user.userId}>
+                <ListItem
+                  button
+                  onClick={() => handleUserSelect(user)}
+                  sx={{
+                    backgroundColor: user.userId === selectedUserId ? '#f0e6f7' : 'transparent',
+                    borderRadius: '8px',
+                    my: 0.5,
+                    mx: 0.5, // Reduced horizontal margin
+                    '&:hover': {
+                      backgroundColor: user.userId === selectedUserId ? '#f0e6f7' : '#f5f5f5',
+                    },
+                    position: 'relative', // Add this to allow absolute positioning of the badge
+                  }}
+                >
+                  <ListItemAvatar>
+                    <Avatar src={user.profileImageUrl} sx={{ width: 40, height: 40 }} /> {/* Smaller avatar */}
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={
+                      <Typography sx={{ 
+                        fontWeight: unreadMessages[user.userId]?.hasUnread ? 'bold' : 'normal',
+                        fontSize: '0.9rem', // Smaller font size
+                      }}>
+                        {user.username}
+                      </Typography>
+                    }
+                    secondary={
+                      <Typography variant="body2" color="text.secondary" noWrap sx={{ fontSize: '0.8rem' }}> {/* Smaller font size */}
+                        {lastMessages[user.userId] ? truncateMessage(lastMessages[user.userId], 20) : user.email} {/* Shorter truncation */}
+                      </Typography>
+                    }
+                  />
+                  {unreadMessages[user.userId]?.unreadCount > 0 && (
+                    <Badge
+                      badgeContent={unreadMessages[user.userId].unreadCount}
+                      color="primary"
+                      sx={{
+                        position: 'absolute',
+                        right: 25, // Adjust this value to move the badge left or right
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                      }}
+                    />
+                  )}
+                </ListItem>
+                {index < filteredUsers.length - 1 && <Divider variant="inset" component="li" />}
+              </React.Fragment>
+            ))}
+          </List>
+        ) : (
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              height: '100%',
+              p: 2,
+              textAlign: 'center',
+            }}
+          >
+            <Typography variant="body1" color="text.secondary" gutterBottom>
+              {filter === 'recent' ? "You don't have any contacts." : "No users found."}
+            </Typography>
+            {filter === 'recent' && (
+              <Typography variant="body2" color="text.secondary">
+                Tip: Use the search box or click "All Users" to connect with people.
+              </Typography>
+            )}
+          </Box>
+        )}
       </Box>
 
       {/* UserProfile component at the bottom */}
@@ -233,9 +288,9 @@ const Sidebar = ({ currentUser, selectChatUser, handleLogout }) => {
           position: 'sticky',
           bottom: 0,
           zIndex: 1,
-          p: 2,
-          backgroundColor: '#f7f9fc',
-          borderTop: '1px solid #ddd',
+          p: 1, // Reduced padding
+          backgroundColor: '#ffffff',
+          borderTop: '1px solid #e0e0e0',
         }}
       >
         <UserProfile currentUser={currentUser} handleLogout={handleLogout} />

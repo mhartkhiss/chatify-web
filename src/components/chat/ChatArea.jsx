@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Typography, Avatar, Grid, TextField, Button, Menu, MenuItem, IconButton } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
+import CloseIcon from '@mui/icons-material/Close';
 import { getDatabase, ref, onValue, push, set, serverTimestamp, off } from "firebase/database";
 
-const ChatArea = ({ currentUser, chatUser }) => {
+const ChatArea = ({ currentUser, chatUser, onClose }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [anchorEl, setAnchorEl] = useState(null);
@@ -111,6 +112,7 @@ const ChatArea = ({ currentUser, chatUser }) => {
           sx={{ 
             display: 'flex', 
             alignItems: 'center', 
+            justifyContent: 'space-between',
             p: 2, 
             backgroundColor: '#ffffff', 
             borderBottom: '1px solid #e0e0e0', 
@@ -118,13 +120,24 @@ const ChatArea = ({ currentUser, chatUser }) => {
             borderRadius: '0 0 8px 8px'
           }}
         >
-          <Avatar src={chatUser.profileImageUrl} sx={{ width: 48, height: 48, mr: 2 }} />
-          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-            <Typography variant="h6" sx={{ fontWeight: '500', color: '#333' }}>{chatUser.username}</Typography>
-            <Typography variant="body2" sx={{ color: '#888' }}>
-              {chatUser.language || chatUser.email}
-            </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Avatar src={chatUser.profileImageUrl} sx={{ width: 48, height: 48, mr: 2 }} />
+            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+              <Typography variant="h6" sx={{ fontWeight: '500', color: '#333' }}>{chatUser.username}</Typography>
+              <Typography variant="body2" sx={{ color: '#888' }}>
+                {chatUser.language || chatUser.email}
+              </Typography>
+            </Box>
           </Box>
+          <IconButton 
+            onClick={onClose}
+            sx={{ 
+              color: '#888',
+              '&:hover': { color: '#333' },
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
         </Box>
       )}
       <Box 
