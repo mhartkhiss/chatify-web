@@ -1,13 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { sendPasswordResetEmail } from "firebase/auth"; // Firebase function for password reset
 import { TextField, Button, Container, Box, Alert } from "@mui/material";
 import { auth } from "../../firebaseConfig";
-import { useNavigate, Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
 import PageTransition from "../PageTransition";
 import AuthBackground from "../AuthBackground";
+import useForm from "../../hooks/useForm";
+import { forgotPasswordStyles } from "./styles"; // Add this to the styles.js file
 
-const ForgotPassword = () => {
-  const [email, setEmail] = useState("");
+const initialState = {
+  email: "",
+};
+
+const ForgotPassword = React.memo(() => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
@@ -26,80 +31,68 @@ const ForgotPassword = () => {
     return () => clearInterval(interval);
   }, [isButtonDisabled, timer]);
 
-  const handlePasswordReset = async (e) => {
-    e.preventDefault();
-    if (!email) {
-      setError("Please enter your email.");
-      return;
+  const validateForm = useCallback((values) => {
+    const errors = {};
+    if (!values.email) {
+      errors.email = "Email is required";
+    } else if (!/\S+@\S+\.\S+/.test(values.email)) {
+      errors.email = "Email is invalid";
     }
+    return errors;
+  }, []);
+
+  const onSubmit = useCallback(async (values) => {
     try {
-      await sendPasswordResetEmail(auth, email);
-      setMessage("If an account exists for this email, a password reset link will be sent shortly.");
+      await sendPasswordResetEmail(auth, values.email);
+      setMessage("Link has been sent. If an account exists for this email, a password reset link will be sent shortly.");
       setError("");
       setIsButtonDisabled(true);
     } catch (err) {
       setError("An error occurred. Please try again later.");
       console.error(err);
     }
-  };
+  }, []);
+
+  const { values, errors, handleChange, handleSubmit } = useForm(
+    initialState,
+    onSubmit,
+    validateForm
+  );
+
+  const formFields = useMemo(() => [
+    { name: "email", label: "Email", type: "email" },
+  ], []);
 
   return (
     <AuthBackground label="Forgot Password" labelVariant="h6" showLogo={false} labelAlign="center">
-      <Container
-        maxWidth="xs"
-        sx={{
-          pt: 4,  // Reduced top padding
-          pb: 4,
-          px: 4,
-          boxShadow: 3,
-          backgroundColor: "rgba(255, 255, 255, 0.8)",
-          borderRadius: 2,
-        }}
-      >
+      <Container maxWidth="xs" sx={forgotPasswordStyles.container}>
         <PageTransition>
-          <Box
-            component="form"
-            onSubmit={handlePasswordReset}
-            sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}
-          >
+          <Box component="form" onSubmit={handleSubmit} sx={forgotPasswordStyles.form}>
             {message && <Alert severity="info">{message}</Alert>}
             {error && <Alert severity="error">{error}</Alert>}
-            <TextField
-              label="Email"
-              variant="outlined"
-              fullWidth
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              sx={{
-                boxShadow: 1,
-                borderRadius: 1,
-                '& .MuiOutlinedInput-root': {
-                  '& fieldset': {
-                    borderColor: '#9D7BB0',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: '#7E5A9B',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#7E5A9B',
-                  },
-                },
-              }}
-            />
+            {formFields.map((field) => (
+              <TextField
+                key={field.name}
+                name={field.name}
+                label={field.label}
+                type={field.type}
+                variant="outlined"
+                fullWidth
+                value={values[field.name]}
+                onChange={handleChange}
+                error={Boolean(errors[field.name])}
+                helperText={errors[field.name] || ""}
+                required
+                sx={forgotPasswordStyles.textField}
+              />
+            ))}
             <Button
               type="submit"
               variant="contained"
               fullWidth
               size="large"
               disabled={isButtonDisabled}
-              sx={{
-                py: 1.5,
-                backgroundColor: "#7E5A9B",
-                color: "white",
-                "&:hover": { backgroundColor: "#9D7BB0" },
-                "&:disabled": { backgroundColor: "#9D7BB0", color: "white" },
-              }}
+              sx={forgotPasswordStyles.submitButton}
             >
               {isButtonDisabled ? `Resend in ${timer}s` : "Send Password Reset Email"}
             </Button>
@@ -109,12 +102,7 @@ const ForgotPassword = () => {
               variant="outlined"
               fullWidth
               size="large"
-              sx={{
-                py: 1.5,
-                borderColor: "#9D7BB0",
-                color: "#7E5A9B",
-                "&:hover": { backgroundColor: "#E0B1CB", borderColor: "#7E5A9B" },
-              }}
+              sx={forgotPasswordStyles.backButton}
             >
               Back to Login
             </Button>
@@ -123,6 +111,6 @@ const ForgotPassword = () => {
       </Container>
     </AuthBackground>
   );
-};
+});
 
 export default ForgotPassword;

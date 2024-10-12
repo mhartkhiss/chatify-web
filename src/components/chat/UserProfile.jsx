@@ -7,6 +7,7 @@ import { ref, onValue, update } from 'firebase/database'; // Firebase Realtime D
 import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage'; // Firebase Storage functions
 import Cropper from 'react-easy-crop'; // Image Cropper
 import { getCroppedImg } from './cropImage'; // Import named export
+import { useLanguage } from '../../contexts/Languages'; // Import useLanguage hook
 
 const UserProfile = ({ currentUser }) => {
   const [userData, setUserData] = useState({
@@ -28,6 +29,8 @@ const UserProfile = ({ currentUser }) => {
   const [searchTerm, setSearchTerm] = useState(''); // Anchor element for language popover
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { languages } = useLanguage(); // Use the languages from the context
+  const [filteredLanguages, setFilteredLanguages] = useState(languages);
 
   useEffect(() => {
     const userRef = ref(database, `users/${currentUser.uid}`);
@@ -46,6 +49,15 @@ const UserProfile = ({ currentUser }) => {
 
     return () => unsubscribe();
   }, [currentUser.uid]);
+
+  // Add these utility functions at the beginning of the component
+  const truncateText = (text, maxLength) => {
+    if (text.length <= maxLength) return text;
+    return text.slice(0, maxLength - 3) + '...';
+  };
+
+  const truncatedUsername = truncateText(userData.username, 20);
+  const truncatedEmail = truncateText(currentUser.email, 25);
 
   // Handle avatar selection
   const handleAvatarChange = (e) => {
@@ -145,13 +157,23 @@ const UserProfile = ({ currentUser }) => {
 
   const handleLanguageDoubleClick = (event) => {
     setAnchorEl(event.currentTarget);
+    setFilteredLanguages(languages); // Reset filtered languages when opening popover
   };
 
   const handleLanguageSelect = async (language) => {
     const userRef = ref(database, `users/${currentUser.uid}`);
-    await update(userRef, { language });
-    setUserData((prevData) => ({ ...prevData, language }));
+    await update(userRef, { language: language.label });
+    setUserData((prevData) => ({ ...prevData, language: language.label }));
     setAnchorEl(null);
+  };
+
+  const handleSearchChange = (e) => {
+    const searchTerm = e.target.value.toLowerCase();
+    const filtered = languages.filter(lang => 
+      lang.label.toLowerCase().includes(searchTerm)
+    );
+    setFilteredLanguages(filtered);
+    setSearchTerm(e.target.value);
   };
 
   const handlePopoverClose = () => {
@@ -161,159 +183,10 @@ const UserProfile = ({ currentUser }) => {
   const open = Boolean(anchorEl);
 
   return (
-    <Box sx={{
-      display: 'flex',
-      flexDirection: isMobile ? 'column' : 'row',
-      alignItems: isMobile ? 'flex-start' : 'center',
-      justifyContent: 'space-between',
-      p: 1.5,
-      borderRadius: '5px',
-      backgroundColor: '#7a49a5',
-      color: '#fff',
-      borderTop: '1px solid #23272A'
-    }}>
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        width: isMobile ? '100%' : 'auto',
-        marginBottom: isMobile ? 2 : 0
-      }}>
-        <Box sx={{ position: 'relative', mr: 2 }}>
-          <input
-            accept="image/*"
-            type="file"
-            id="avatar-upload"
-            style={{ display: 'none' }}
-            onChange={handleAvatarChange} // Handle the file selection
-          />
-          <label htmlFor="avatar-upload">
-            <Avatar 
-              src={userData.profileImageUrl}
-              sx={{ width: 40, height: 40, cursor: 'pointer' }}
-            />
-          </label>
-          {/* Online status indicator */}
-          <Box
-            sx={{
-              position: 'absolute',
-              bottom: 0,
-              right: 0,
-              width: 12,
-              height: 12,
-              backgroundColor: '#43b581', // Green color for "online" status
-              borderRadius: '50%',
-              border: '2px solid #7a49a5', // Border matches background for a "cutout" effect
-            }}
-          />
-        </Box>
-        <Box sx={{ flexGrow: 1 }}>
-          {editingUsername ? (
-            <TextField
-              value={newUsername}
-              onChange={(e) => setNewUsername(e.target.value)}
-              onBlur={handleUsernameChange}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleUsernameChange();
-              }}
-              size="small"
-              autoFocus
-              sx={{
-                input: { color: '#fff' },
-              }}
-            />
-          ) : (
-            <Typography
-              variant="body1"
-              sx={{ fontWeight: '500', cursor: 'pointer' }}
-              onClick={handleUsernameDoubleClick}
-            >
-              {userData.username}
-            </Typography>
-          )}
-          <Typography
-            variant="caption"
-            sx={{ 
-              color: '#b9bbbe', 
-              cursor: 'pointer',
-              display: 'block',  // Ensure it's on a new line
-              wordBreak: 'break-word'  // Allow long emails to wrap
-            }}
-            onClick={handleLanguageDoubleClick}
-          >
-            {userData.language || currentUser.email}
-          </Typography>
-        </Box>
-      </Box>
-
-      {/* Language Popover */}
-      <Popover
-        open={open}
-        anchorEl={anchorEl}
-        onClose={handlePopoverClose}
-        anchorOrigin={{
-          vertical: 'top',
-          horizontal: 'center',
-        }}
-        transformOrigin={{
-          vertical: 'bottom',
-          horizontal: 'center',
-        }}
-      >
-        <Box sx={{ p: 2, minWidth: 250 }}><TextField placeholder='Search language...' variant='outlined' size='small' fullWidth sx={{ mb: 1 }} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /><List sx={{ maxHeight: 200, overflow: 'auto', border: '1px solid #ccc', borderRadius: '4px' }}>
-          {['English', 'Tagalog', 'Bisaya', 'Spanish', 'French', 'German', 'Chinese', 'Japanese', 'Russian', 'Italian', 'Portuguese', 'Hindi', 'Arabic', 'Korean', 'Dutch', 'Swedish', 'Greek', 'Turkish', 'Hebrew', 'Vietnamese', 'Thai', 'Indonesian', 'Danish', 'Finnish', 'Polish', 'Norwegian', 'Czech', 'Hungarian', 'Ukrainian', 'Malay', 'Romanian'].filter((language) => language.toLowerCase().includes(searchTerm.toLowerCase())).map((language) => (
-            <ListItem key={language} disablePadding>
-              <ListItemButton onClick={() => handleLanguageSelect(language)}>
-                {language}
-              </ListItemButton>
-            </ListItem>
-          ))}
-        </List></Box>
-      </Popover>
-
-      {/* Crop Dialog */}
-      <Dialog
-        open={openCropDialog}
-        onClose={() => setOpenCropDialog(false)}
-        maxWidth="md" // Set a larger width for the dialog
-        fullWidth={true} // Make it use the full available width
-      >
-        <DialogContent
-          sx={{
-            position: 'relative',
-            width: '100%',
-            height: '400px', // Adjust height for larger crop area
-            backgroundColor: '#333', // Dark background for contrast
-          }}
-        >
-          <Cropper
-            image={avatarFile ? URL.createObjectURL(avatarFile) : null}
-            crop={crop}
-            zoom={zoom}
-            aspect={1} // 1:1 aspect ratio for avatar
-            onCropChange={setCrop}
-            onZoomChange={setZoom}
-            onCropComplete={onCropComplete}
-            style={{
-              containerStyle: {
-                width: '100%',
-                height: '100%',
-              },
-            }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenCropDialog(false)} color="secondary">
-            Cancel
-          </Button>
-          <Button onClick={handleCropUpload} color="primary">
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
-
+    <Box>
       {/* Progress Bar for uploading */}
       {uploading && (
-        <Box sx={{ width: '100%', mt: 2 }}>
+        <Box sx={{ width: '100%', mb: 2 }}>
           <LinearProgress variant="determinate" value={uploadProgress} />
           <Typography variant="caption" sx={{ color: '#b9bbbe' }}>
             Uploading: {Math.round(uploadProgress)}%
@@ -321,19 +194,194 @@ const UserProfile = ({ currentUser }) => {
         </Box>
       )}
 
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center',
-        width: isMobile ? '100%' : 'auto',
-        justifyContent: isMobile ? 'flex-end' : 'flex-start',
-        marginTop: isMobile ? 2 : 0
+      <Box sx={{
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        alignItems: isMobile ? 'flex-start' : 'center',
+        justifyContent: 'space-between',
+        p: 1.5,
+        borderRadius: '5px',
+        backgroundColor: '#7a49a5',
+        color: '#fff',
+        borderTop: '1px solid #23272A'
       }}>
-        <IconButton sx={{ color: '#b9bbbe' }} onClick={handleLogout}>
-          <LogoutIcon />
-        </IconButton>
-        <IconButton sx={{ color: '#b9bbbe' }}>
-          <SettingsIcon />
-        </IconButton>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          width: isMobile ? '100%' : 'auto',
+          marginBottom: isMobile ? 2 : 0,
+          maxWidth: isMobile ? '100%' : 'calc(100% - 80px)', // Adjust width to leave space for icons
+        }}>
+          <Box sx={{ position: 'relative', mr: 2 }}>
+            <input
+              accept="image/*"
+              type="file"
+              id="avatar-upload"
+              style={{ display: 'none' }}
+              onChange={handleAvatarChange} // Handle the file selection
+            />
+            <label htmlFor="avatar-upload">
+              <Avatar 
+                src={userData.profileImageUrl}
+                sx={{ width: 40, height: 40, cursor: 'pointer' }}
+              />
+            </label>
+            {/* Online status indicator */}
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: 0,
+                right: 0,
+                width: 12,
+                height: 12,
+                backgroundColor: '#43b581', // Green color for "online" status
+                borderRadius: '50%',
+                border: '2px solid #7a49a5', // Border matches background for a "cutout" effect
+              }}
+            />
+          </Box>
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}> {/* Add minWidth: 0 to allow text truncation */}
+            {editingUsername ? (
+              <TextField
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.target.value)}
+                onBlur={handleUsernameChange}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleUsernameChange();
+                }}
+                size="small"
+                autoFocus
+                sx={{
+                  input: { color: '#fff' },
+                  maxWidth: '100%',
+                }}
+              />
+            ) : (
+              <Typography
+                variant="body1"
+                sx={{ 
+                  fontWeight: '500', 
+                  cursor: 'pointer',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+                onClick={handleUsernameDoubleClick}
+                title={userData.username} // Show full username on hover
+              >
+                {truncatedUsername}
+              </Typography>
+            )}
+            <Typography
+              variant="caption"
+              sx={{ 
+                color: '#b9bbbe', 
+                cursor: 'pointer',
+                display: 'block',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+              onClick={handleLanguageDoubleClick}
+              title={userData.language || currentUser.email} // Show full email/language on hover
+            >
+              {userData.language || truncatedEmail}
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Language Popover */}
+        <Popover
+          open={Boolean(anchorEl)}
+          anchorEl={anchorEl}
+          onClose={() => setAnchorEl(null)}
+          anchorOrigin={{
+            vertical: 'top',
+            horizontal: 'center',
+          }}
+          transformOrigin={{
+            vertical: 'bottom',
+            horizontal: 'center',
+          }}
+        >
+          <Box sx={{ p: 2, minWidth: 250 }}>
+            <TextField 
+              placeholder='Search language...' 
+              variant='outlined' 
+              size='small' 
+              fullWidth 
+              sx={{ mb: 1 }} 
+              value={searchTerm} 
+              onChange={handleSearchChange}
+            />
+            <List sx={{ maxHeight: 200, overflow: 'auto', border: '1px solid #ccc', borderRadius: '4px' }}>
+              {filteredLanguages.map((language) => (
+                <ListItem key={language.label} disablePadding>
+                  <ListItemButton onClick={() => handleLanguageSelect(language)}>
+                    {language.label}
+                  </ListItemButton>
+                </ListItem>
+              ))}
+            </List>
+          </Box>
+        </Popover>
+
+        {/* Crop Dialog */}
+        <Dialog
+          open={openCropDialog}
+          onClose={() => setOpenCropDialog(false)}
+          maxWidth="md" // Set a larger width for the dialog
+          fullWidth={true} // Make it use the full available width
+        >
+          <DialogContent
+            sx={{
+              position: 'relative',
+              width: '100%',
+              height: '400px', // Adjust height for larger crop area
+              backgroundColor: '#333', // Dark background for contrast
+            }}
+          >
+            <Cropper
+              image={avatarFile ? URL.createObjectURL(avatarFile) : null}
+              crop={crop}
+              zoom={zoom}
+              aspect={1} // 1:1 aspect ratio for avatar
+              onCropChange={setCrop}
+              onZoomChange={setZoom}
+              onCropComplete={onCropComplete}
+              style={{
+                containerStyle: {
+                  width: '100%',
+                  height: '100%',
+                },
+              }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenCropDialog(false)} color="secondary">
+              Cancel
+            </Button>
+            <Button onClick={handleCropUpload} color="primary">
+              Save
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center',
+          width: isMobile ? '100%' : 'auto',
+          justifyContent: isMobile ? 'flex-end' : 'flex-start',
+          marginTop: isMobile ? 2 : 0,
+          flexShrink: 0, // Prevent icons from shrinking
+        }}>
+          <IconButton sx={{ color: '#b9bbbe' }} onClick={handleLogout}>
+            <LogoutIcon />
+          </IconButton>
+          <IconButton sx={{ color: '#b9bbbe' }}>
+            <SettingsIcon />
+          </IconButton>
+        </Box>
       </Box>
     </Box>
   );

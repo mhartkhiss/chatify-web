@@ -5,7 +5,7 @@ import SearchBar from './SearchBar';
 import UserProfile from './UserProfile';
 import { MessageOutlined, PeopleOutline } from '@mui/icons-material';
 
-const Sidebar = ({ currentUser, selectChatUser, handleLogout }) => {
+const Sidebar = ({ currentUser, selectChatUser, handleLogout, activeChatUserId }) => {
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [userConversations, setUserConversations] = useState({});
@@ -30,6 +30,7 @@ const Sidebar = ({ currentUser, selectChatUser, handleLogout }) => {
       const conversations = snapshot.val();
       const userConvo = {};
       const unreadMsg = {};
+      const lastMsgs = {};
 
       if (conversations) {
         Object.keys(conversations).forEach(chatId => {
@@ -55,18 +56,28 @@ const Sidebar = ({ currentUser, selectChatUser, handleLogout }) => {
               unreadCount,
             };
 
-            setLastMessages((prevLastMessages) => ({
-              ...prevLastMessages,
-              [otherUserId]: latestMessage.message || '',
-            }));
+            lastMsgs[otherUserId] = {
+              message: latestMessage.message || '',
+              messageOG: latestMessage.messageOG || '',
+              senderId: latestMessage.senderId,
+            };
           }
         });
       }
 
       setUserConversations(userConvo);
       setUnreadMessages(unreadMsg);
+      setLastMessages(lastMsgs);
     });
-  }, [currentUser]);
+
+    // Add this new effect to clear unread messages for the active chat
+    if (activeChatUserId) {
+      setUnreadMessages(prev => ({
+        ...prev,
+        [activeChatUserId]: { hasUnread: false, unreadCount: 0 }
+      }));
+    }
+  }, [currentUser, activeChatUserId]);
 
   const sortUsersByLatestMessage = (userList) => {
     return userList.sort((a, b) => {
@@ -229,19 +240,26 @@ const Sidebar = ({ currentUser, selectChatUser, handleLogout }) => {
                   <ListItemText
                     primary={
                       <Typography sx={{ 
-                        fontWeight: unreadMessages[user.userId]?.hasUnread ? 'bold' : 'normal',
+                        fontWeight: unreadMessages[user.userId]?.hasUnread && user.userId !== activeChatUserId ? 'bold' : 'normal',
                         fontSize: '0.9rem', // Smaller font size
                       }}>
                         {user.username}
                       </Typography>
                     }
                     secondary={
-                      <Typography variant="body2" color="text.secondary" noWrap sx={{ fontSize: '0.8rem' }}> {/* Smaller font size */}
-                        {lastMessages[user.userId] ? truncateMessage(lastMessages[user.userId], 20) : user.email} {/* Shorter truncation */}
+                      <Typography variant="body2" color="text.secondary" noWrap sx={{ fontSize: '0.8rem' }}>
+                        {lastMessages[user.userId] 
+                          ? truncateMessage(
+                              lastMessages[user.userId].senderId === currentUser.uid 
+                                ? lastMessages[user.userId].messageOG 
+                                : lastMessages[user.userId].message, 
+                              20
+                            ) 
+                          : user.email}
                       </Typography>
                     }
                   />
-                  {unreadMessages[user.userId]?.unreadCount > 0 && (
+                  {unreadMessages[user.userId]?.unreadCount > 0 && user.userId !== activeChatUserId && (
                     <Badge
                       badgeContent={unreadMessages[user.userId].unreadCount}
                       color="primary"

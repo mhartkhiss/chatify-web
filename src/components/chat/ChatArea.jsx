@@ -1,15 +1,22 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Typography, Avatar, Grid, TextField, Button, Menu, MenuItem, IconButton } from '@mui/material';
+import { Box, Typography, Avatar, Grid, TextField, Button, Menu, MenuItem, IconButton, Snackbar, CircularProgress } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import CloseIcon from '@mui/icons-material/Close';
 import { getDatabase, ref, onValue, push, set, serverTimestamp, off } from "firebase/database";
+import { translateToLanguage } from '../../services/geminiTranslator';
+import TranslationAnimation from './TranslationAnimation';
 
 const ChatArea = ({ currentUser, chatUser, onClose }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedMessageId, setSelectedMessageId] = useState(null);
+  const [showOriginalFor, setShowOriginalFor] = useState(null);
+  const [contactLanguage, setContactLanguage] = useState(chatUser.language);
+  const [showLanguageNotification, setShowLanguageNotification] = useState(false);
   const messagesEndRef = useRef(null);
+  const previousChatUserRef = useRef(chatUser);
+  const [isSending, setIsSending] = useState(false);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -20,22 +27,45 @@ const ChatArea = ({ currentUser, chatUser, onClose }) => {
       const db = getDatabase();
       const chatId = [currentUser.uid, chatUser.userId].sort().join('_');
       const messagesRef = ref(db, `messages/${chatId}`);
+      const userLanguageRef = ref(db, `users/${chatUser.userId}/language`);
 
-      const unsubscribe = onValue(messagesRef, (snapshot) => {
+      const messageUnsubscribe = onValue(messagesRef, (snapshot) => {
         const data = snapshot.val();
         setMessages(data ? Object.values(data) : []);
       });
 
-      return () => off(messagesRef);
+      const languageUnsubscribe = onValue(userLanguageRef, (snapshot) => {
+        const newLanguage = snapshot.val();
+        if (newLanguage && newLanguage !== contactLanguage) {
+          setContactLanguage(newLanguage);
+          if (previousChatUserRef.current.userId === chatUser.userId) {
+            setShowLanguageNotification(true);
+          }
+        }
+      });
+
+      return () => {
+        off(messagesRef);
+        off(userLanguageRef);
+      };
     }
-  }, [currentUser, chatUser]);
+  }, [currentUser, chatUser, contactLanguage]);
+
+  useEffect(() => {
+    setContactLanguage(chatUser.language);
+    previousChatUserRef.current = chatUser;
+  }, [chatUser]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  const handleSendMessage = useCallback(() => {
-    if (newMessage.trim() === '') return;
+  const handleSendMessage = useCallback(async () => {
+    if (newMessage.trim() === '' || isSending) return;
+
+    setIsSending(true);
+    const messageToSend = newMessage;
+    setNewMessage('');
 
     const db = getDatabase();
     const chatId = [currentUser.uid, chatUser.userId].sort().join('_');
@@ -44,18 +74,32 @@ const ChatArea = ({ currentUser, chatUser, onClose }) => {
 
     const messageData = {
       messageId: newMessageRef.key,
-      messageOG: newMessage,
-      message: newMessage,
+      messageOG: messageToSend,
+      message: "Translating...",
       senderId: currentUser.uid,
       timestamp: serverTimestamp()
     };
 
-    set(newMessageRef, messageData);
-    setNewMessage('');
-  }, [newMessage, currentUser.uid, chatUser.userId]);
+    try {
+      await set(newMessageRef, messageData);
+      const translatedMessage = await translateToLanguage(messageToSend, contactLanguage);
+      await set(newMessageRef, {
+        ...messageData,
+        message: translatedMessage,
+      });
+    } catch (error) {
+      console.error('Translation error:', error);
+      await set(newMessageRef, {
+        ...messageData,
+        message: messageToSend,
+      });
+    } finally {
+      setIsSending(false);
+    }
+  }, [newMessage, currentUser.uid, chatUser.userId, contactLanguage, isSending]);
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
@@ -99,8 +143,9 @@ const ChatArea = ({ currentUser, chatUser, onClose }) => {
   const handleMenuOption = (option) => {
     if (option === 'regenerate') {
       console.log("Regenerate Translation for:", selectedMessageId);
+      // Implement regenerate translation logic here
     } else if (option === 'showOriginal') {
-      console.log("Show Original Message for:", selectedMessageId);
+      setShowOriginalFor(selectedMessageId);
     }
     handleCloseMenu();
   };
@@ -125,7 +170,7 @@ const ChatArea = ({ currentUser, chatUser, onClose }) => {
             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
               <Typography variant="h6" sx={{ fontWeight: '500', color: '#333' }}>{chatUser.username}</Typography>
               <Typography variant="body2" sx={{ color: '#888' }}>
-                {chatUser.language || chatUser.email}
+                {contactLanguage || chatUser.email}
               </Typography>
             </Box>
           </Box>
@@ -153,63 +198,74 @@ const ChatArea = ({ currentUser, chatUser, onClose }) => {
         }}
       >
         {messages.map((msg, index) => {
-  const showAvatar = index === messages.length - 1 || messages[index + 1]?.senderId !== msg.senderId;
-  const isLastMessageFromContact = (index === messages.length - 1 || messages[index + 1]?.senderId !== msg.senderId) && msg.senderId !== currentUser.uid;
-  const isLastMessageFromCurrentUser = (index === messages.length - 1 || messages[index + 1]?.senderId !== msg.senderId) && msg.senderId === currentUser.uid;
+          const showAvatar = index === messages.length - 1 || messages[index + 1]?.senderId !== msg.senderId;
+          const isLastMessageFromContact = (index === messages.length - 1 || messages[index + 1]?.senderId !== msg.senderId) && msg.senderId !== currentUser.uid;
+          const isLastMessageFromCurrentUser = (index === messages.length - 1 || messages[index + 1]?.senderId !== msg.senderId) && msg.senderId === currentUser.uid;
+          const isCurrentUserMessage = msg.senderId === currentUser.uid;
+          const messageToDisplay = isCurrentUserMessage ? msg.messageOG : (msg.message || msg.messageOG);
+          const isTranslating = !isCurrentUserMessage && msg.message === "Translating...";
 
-  return (
-    <Grid
-      container
-      spacing={2}
-      key={index}
-      justifyContent={msg.senderId === currentUser.uid ? 'flex-end' : 'flex-start'}
-      sx={{ mb: 2 }}
-      onClick={(e) => handleMessageClick(e, msg)}
-    >
-      {msg.senderId !== currentUser.uid && showAvatar && (
-        <Grid item>
-          <Avatar 
-            src={chatUser.profileImageUrl} 
-            sx={{ alignSelf: 'flex-end' }}
-          />
-        </Grid>
-      )}
-      <Grid item xs={8} md={6} lg={5}>
-        <Box
-          sx={{
-            p: 2,
-            backgroundColor: msg.messageId === selectedMessageId ? '#d1c4e9' : msg.senderId === currentUser.uid ? '#AD49E1' : '#E5D9F2',
-            color: msg.senderId === currentUser.uid ? '#fff' : '#333',
-            borderRadius: '16px',
-            boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
-            position: 'relative',
-            wordWrap: 'break-word',
-            maxWidth: '100%',
-            '&:before': (msg.senderId === currentUser.uid && isLastMessageFromCurrentUser) || (msg.senderId !== currentUser.uid && !isLastMessageFromContact) ? {
-              content: '""',
-              position: 'absolute',
-              bottom: -8,
-              left: msg.senderId === currentUser.uid ? 'auto' : 10,
-              right: msg.senderId === currentUser.uid ? 10 : 'auto',
-              width: 0,
-              height: 0,
-              borderTop: '9px solid',
-              borderTopColor: msg.senderId === currentUser.uid ? '#AD49E1' : '#E5D9F2',
-              borderLeft: '8px solid transparent',
-              borderRight: '8px solid transparent',
-            } : undefined,
-          }}
-        >
-          <Typography variant="body1">{msg.messageOG}</Typography>
-          <Typography variant="caption" sx={{ position: 'absolute', right: 10, bottom: 5, color: '#bbb' }}>
-            {msg.timestamp ? formatTimestamp(msg.timestamp) : 'Sending...'}
-          </Typography>
-        </Box>
-      </Grid>
-    </Grid>
-  );
-})}
-
+          return (
+            <Grid
+              container
+              spacing={2}
+              key={index}
+              justifyContent={isCurrentUserMessage ? 'flex-end' : 'flex-start'}
+              sx={{ mb: 2 }}
+              onClick={(e) => handleMessageClick(e, msg)}
+            >
+              {!isCurrentUserMessage && showAvatar && (
+                <Grid item>
+                  <Avatar 
+                    src={chatUser.profileImageUrl} 
+                    sx={{ alignSelf: 'flex-end' }}
+                  />
+                </Grid>
+              )}
+              <Grid item xs={8} md={6} lg={5}>
+                <Box
+                  sx={{
+                    p: 2,
+                    backgroundColor: msg.messageId === selectedMessageId ? '#d1c4e9' : isCurrentUserMessage ? '#AD49E1' : '#E5D9F2',
+                    color: isCurrentUserMessage ? '#fff' : '#333',
+                    borderRadius: '16px',
+                    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+                    position: 'relative',
+                    wordWrap: 'break-word',
+                    maxWidth: '100%',
+                    '&:before': (isCurrentUserMessage && isLastMessageFromCurrentUser) || (!isCurrentUserMessage && !isLastMessageFromContact) ? {
+                      content: '""',
+                      position: 'absolute',
+                      bottom: -8,
+                      left: isCurrentUserMessage ? 'auto' : 10,
+                      right: isCurrentUserMessage ? 10 : 'auto',
+                      width: 0,
+                      height: 0,
+                      borderTop: '9px solid',
+                      borderTopColor: isCurrentUserMessage ? '#AD49E1' : '#E5D9F2',
+                      borderLeft: '8px solid transparent',
+                      borderRight: '8px solid transparent',
+                    } : undefined,
+                  }}
+                >
+                  {isTranslating ? (
+                    <TranslationAnimation />
+                  ) : (
+                    <Typography variant="body1">{messageToDisplay}</Typography>
+                  )}
+                  {showOriginalFor === msg.messageId && !isCurrentUserMessage && msg.message !== msg.messageOG && (
+                    <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'rgba(0, 0, 0, 0.6)' }}>
+                      {msg.messageOG}
+                    </Typography>
+                  )}
+                  <Typography variant="caption" sx={{ position: 'absolute', right: 10, bottom: 5, color: '#bbb' }}>
+                    {msg.timestamp ? formatTimestamp(msg.timestamp) : 'Sending...'}
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+          );
+        })}
 
         <div ref={messagesEndRef} />
       </Box>
@@ -280,6 +336,7 @@ const ChatArea = ({ currentUser, chatUser, onClose }) => {
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           onKeyPress={handleKeyPress}
+          disabled={isSending}
           sx={{
             borderRadius: 2,
             backgroundColor: '#f5f7fb',
@@ -300,15 +357,25 @@ const ChatArea = ({ currentUser, chatUser, onClose }) => {
         <IconButton 
           color="primary" 
           onClick={handleSendMessage}
+          disabled={isSending || newMessage.trim() === ''}
           sx={{ 
             backgroundColor: '#8967B3', 
             color: '#fff',
             '&:hover': { backgroundColor: '#7A1CAC' },
+            '&.Mui-disabled': { backgroundColor: '#ccc' },
           }}
         >
-          <SendIcon />
+          {isSending ? <CircularProgress size={24} color="inherit" /> : <SendIcon />}
         </IconButton>
       </Box>
+
+      <Snackbar
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        open={showLanguageNotification}
+        autoHideDuration={3000}
+        onClose={() => setShowLanguageNotification(false)}
+        message={`${chatUser.username} has updated their language to ${contactLanguage}`}
+      />
     </Box>
   );
 };

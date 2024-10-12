@@ -64,6 +64,7 @@ const AuthBackground = ({ children, label, labelVariant = "h4", showLogo = true,
               fontWeight: 'bold',
               textShadow: '1px 1px 2px rgba(0,0,0,0.2)',
               textAlign: labelAlign,
+              width: 'auto',
             }}
           >
             {label}

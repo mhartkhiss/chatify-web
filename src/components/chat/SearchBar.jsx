@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { InputBase, Paper } from '@mui/material';
+import { InputBase, Paper, IconButton } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 
 const SearchBar = ({ onSearch }) => {
   const [query, setQuery] = useState('');
@@ -17,6 +18,11 @@ const SearchBar = ({ onSearch }) => {
 
   const handleSearchChange = (e) => {
     setQuery(e.target.value);
+  };
+
+  const handleClearSearch = () => {
+    setQuery('');
+    onSearch('');
   };
 
   return (
@@ -39,6 +45,16 @@ const SearchBar = ({ onSearch }) => {
         value={query}
         onChange={handleSearchChange}
       />
+      {query && (
+        <IconButton 
+          size="small" 
+          aria-label="clear" 
+          onClick={handleClearSearch}
+          sx={{ padding: '4px' }}
+        >
+          <ClearIcon sx={{ fontSize: '1.2rem', color: '#888' }} />
+        </IconButton>
+      )}
     </Paper>
   );
 };
