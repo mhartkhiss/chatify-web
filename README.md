@@ -20,7 +20,7 @@ Follow these steps to set up Chatify Web on your local machine:
 1. **Clone the repository or download as ZIP:**
 
 2. **Set up API key:**
-   Create a `secrets.toml` file in the root directory and add your Gemini API key:
+   Create a `secrets.toml` file in the root directory and this line with your Gemini API key:
    ```toml
    GEMINI_API_KEY = "your_gemini_api_key"
    ```
