@@ -3,17 +3,18 @@ import { Box, Typography, Avatar, IconButton, Button, Dialog, DialogActions, Dia
 import LogoutIcon from '@mui/icons-material/Logout';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { auth, database, storage } from '../../firebaseConfig'; // Firebase imports
-import { ref, onValue, update } from 'firebase/database'; // Firebase Realtime Database functions
+import { ref, onValue, update, onDisconnect, set } from 'firebase/database'; // Firebase Realtime Database functions
 import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage'; // Firebase Storage functions
 import Cropper from 'react-easy-crop'; // Image Cropper
 import { getCroppedImg } from './cropImage'; // Import named export
 import { useLanguage } from '../../contexts/Languages'; // Import useLanguage hook
 
-const UserProfile = ({ currentUser }) => {
+const UserProfile = ({ currentUser, handleLogout: parentHandleLogout }) => {
   const [userData, setUserData] = useState({
     profileImageUrl: '/default-avatar.png',
     username: 'Anonymous User',
     language: '',
+    status: 'offline',
   });
   const [editingUsername, setEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState('');
@@ -34,6 +35,14 @@ const UserProfile = ({ currentUser }) => {
 
   useEffect(() => {
     const userRef = ref(database, `users/${currentUser.uid}`);
+    const userStatusRef = ref(database, `status/${currentUser.uid}`);
+
+    // Set user status to online when connected
+    set(userStatusRef, 'online');
+
+    // Set user status to offline when disconnected
+    onDisconnect(userStatusRef).set('offline');
+
     const unsubscribe = onValue(userRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -41,13 +50,23 @@ const UserProfile = ({ currentUser }) => {
           profileImageUrl: data.profileImageUrl || '/default-avatar.png',
           username: data.username || 'Anonymous User',
           language: data.language || '',
+          status: data.status || 'offline',
         });
 
-        setOldAvatarUrl(data.profileImageUrl || ''); // Store the old avatar URL
+        setOldAvatarUrl(data.profileImageUrl || '');
       }
     });
 
-    return () => unsubscribe();
+    // Listen for status changes
+    const statusUnsubscribe = onValue(userStatusRef, (snapshot) => {
+      const status = snapshot.val();
+      update(userRef, { status: status });
+    });
+
+    return () => {
+      unsubscribe();
+      statusUnsubscribe();
+    };
   }, [currentUser.uid]);
 
   // Add these utility functions at the beginning of the component
@@ -135,7 +154,18 @@ const UserProfile = ({ currentUser }) => {
 
   const handleLogout = async () => {
     try {
-      await auth.signOut();
+      const userStatusRef = ref(database, `status/${currentUser.uid}`);
+      const userRef = ref(database, `users/${currentUser.uid}`);
+      
+      // Set user status to offline
+      await set(userStatusRef, 'offline');
+      await update(userRef, { status: 'offline' });
+      
+      // Cancel the onDisconnect operation
+      await onDisconnect(userStatusRef).cancel();
+      
+      // Call the parent handleLogout function
+      await parentHandleLogout();
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -234,9 +264,9 @@ const UserProfile = ({ currentUser }) => {
                 right: 0,
                 width: 12,
                 height: 12,
-                backgroundColor: '#43b581', // Green color for "online" status
+                backgroundColor: userData.status === 'online' ? '#66BB6A' : '#747f8d', // Changed from '#43b581' to '#66BB6A'
                 borderRadius: '50%',
-                border: '2px solid #7a49a5', // Border matches background for a "cutout" effect
+                border: '2px solid #7a49a5',
               }}
             />
           </Box>

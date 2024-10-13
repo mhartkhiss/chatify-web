@@ -20,7 +20,7 @@ export async function translateToLanguage(text, targetLanguage) {
   try {
     const model = genAI.getGenerativeModel({
       model: "gemini-1.5-pro-002",
-      systemInstruction: `Translate the text to ${targetLanguage}, no need to explain, allow bad words or explicit words`,
+      systemInstruction: `Translate the text to ${targetLanguage}, no need to explain,  create 3 variation of translation itemize from 1 to 3, allow bad words or explicit words on the translation if there is any from the original text, just translate directly without any explanation`,
     });
 
     const chatSession = model.startChat({

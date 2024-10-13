@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Typography, Avatar, Grid, TextField, Button, Menu, MenuItem, IconButton, Snackbar, CircularProgress } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import CloseIcon from '@mui/icons-material/Close';
-import { getDatabase, ref, onValue, push, set, serverTimestamp, off } from "firebase/database";
+import { getDatabase, ref, onValue, push, set, serverTimestamp, off, update, get } from "firebase/database";
 import { translateToLanguage } from '../../services/geminiTranslator';
 import TranslationAnimation from './TranslationAnimation';
+import UserInfoModal from './UserInfoModal';
 
 const ChatArea = ({ currentUser, chatUser, onClose }) => {
   const [messages, setMessages] = useState([]);
@@ -14,13 +15,26 @@ const ChatArea = ({ currentUser, chatUser, onClose }) => {
   const [showOriginalFor, setShowOriginalFor] = useState(null);
   const [contactLanguage, setContactLanguage] = useState(chatUser.language);
   const [showLanguageNotification, setShowLanguageNotification] = useState(false);
+  const [chatUserStatus, setChatUserStatus] = useState('offline');
   const messagesEndRef = useRef(null);
   const previousChatUserRef = useRef(chatUser);
   const [isSending, setIsSending] = useState(false);
+  const [isUserInfoModalOpen, setIsUserInfoModalOpen] = useState(false);
+  const [currentVariation, setCurrentVariation] = useState({});
+  const [regeneratingTranslation, setRegeneratingTranslation] = useState(null);
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
+    if (shouldScrollToBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [shouldScrollToBottom]);
+
+  useEffect(() => {
+    if (messages.length > 0 && messages[messages.length - 1].senderId === currentUser.uid) {
+      scrollToBottom();
+    }
+  }, [messages, scrollToBottom, currentUser.uid]);
 
   useEffect(() => {
     if (chatUser) {
@@ -28,6 +42,7 @@ const ChatArea = ({ currentUser, chatUser, onClose }) => {
       const chatId = [currentUser.uid, chatUser.userId].sort().join('_');
       const messagesRef = ref(db, `messages/${chatId}`);
       const userLanguageRef = ref(db, `users/${chatUser.userId}/language`);
+      const userStatusRef = ref(db, `status/${chatUser.userId}`);
 
       const messageUnsubscribe = onValue(messagesRef, (snapshot) => {
         const data = snapshot.val();
@@ -44,9 +59,15 @@ const ChatArea = ({ currentUser, chatUser, onClose }) => {
         }
       });
 
+      const statusUnsubscribe = onValue(userStatusRef, (snapshot) => {
+        const status = snapshot.val();
+        setChatUserStatus(status || 'offline');
+      });
+
       return () => {
         off(messagesRef);
         off(userLanguageRef);
+        off(userStatusRef);
       };
     }
   }, [currentUser, chatUser, contactLanguage]);
@@ -56,13 +77,10 @@ const ChatArea = ({ currentUser, chatUser, onClose }) => {
     previousChatUserRef.current = chatUser;
   }, [chatUser]);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
-
   const handleSendMessage = useCallback(async () => {
     if (newMessage.trim() === '' || isSending) return;
 
+    setShouldScrollToBottom(true);
     setIsSending(true);
     const messageToSend = newMessage;
     setNewMessage('');
@@ -83,9 +101,19 @@ const ChatArea = ({ currentUser, chatUser, onClose }) => {
     try {
       await set(newMessageRef, messageData);
       const translatedMessage = await translateToLanguage(messageToSend, contactLanguage);
+      
+      // Parse the translated message to extract the three variations
+      const variations = translatedMessage.split('\n').filter(line => line.trim() !== '');
+      const messageVar1 = variations[0]?.replace(/^\d+\.\s*/, '') || messageToSend;
+      const messageVar2 = variations[1]?.replace(/^\d+\.\s*/, '') || '';
+      const messageVar3 = variations[2]?.replace(/^\d+\.\s*/, '') || '';
+
       await set(newMessageRef, {
         ...messageData,
-        message: translatedMessage,
+        message: messageVar1,
+        messageVar1: messageVar1,
+        messageVar2: messageVar2,
+        messageVar3: messageVar3,
       });
     } catch (error) {
       console.error('Translation error:', error);
@@ -140,14 +168,41 @@ const ChatArea = ({ currentUser, chatUser, onClose }) => {
     setSelectedMessageId(null);
   };
 
-  const handleMenuOption = (option) => {
+  const handleMenuOption = async (option, messageId) => {
     if (option === 'regenerate') {
-      console.log("Regenerate Translation for:", selectedMessageId);
-      // Implement regenerate translation logic here
-    } else if (option === 'showOriginal') {
-      setShowOriginalFor(selectedMessageId);
+      setShouldScrollToBottom(false);
+      setRegeneratingTranslation(messageId);
+      const db = getDatabase();
+      const chatId = [currentUser.uid, chatUser.userId].sort().join('_');
+      const messageRef = ref(db, `messages/${chatId}/${messageId}`);
+
+      const snapshot = await get(messageRef);
+      const messageData = snapshot.val();
+
+      if (messageData) {
+        let nextVar = 'messageVar1';
+        if (messageData.message === messageData.messageVar1) nextVar = 'messageVar2';
+        else if (messageData.message === messageData.messageVar2) nextVar = 'messageVar3';
+        else if (messageData.message === messageData.messageVar3) nextVar = 'messageVar1';
+
+        await update(messageRef, { message: messageData[nextVar] });
+        setCurrentVariation(prev => ({...prev, [messageId]: nextVar}));
+        
+        // Set a timeout to remove the regenerating state after 1 second
+        setTimeout(() => {
+          setRegeneratingTranslation(null);
+          // Remove this line to prevent scrolling after regeneration
+          // setShouldScrollToBottom(true);
+        }, 1000);
+      }
+    } else if (option === 'toggleOriginal') {
+      setShowOriginalFor(prev => prev === messageId ? null : messageId);
     }
     handleCloseMenu();
+  };
+
+  const handleUserInfoClick = () => {
+    setIsUserInfoModalOpen(true);
   };
 
   return (
@@ -165,12 +220,29 @@ const ChatArea = ({ currentUser, chatUser, onClose }) => {
             borderRadius: '0 0 8px 8px'
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Avatar src={chatUser.profileImageUrl} sx={{ width: 48, height: 48, mr: 2 }} />
+          <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={handleUserInfoClick}>
+            <Box sx={{ position: 'relative', mr: 2 }}>
+              <Avatar 
+                src={chatUser.profileImageUrl} 
+                sx={{ width: 48, height: 48 }}
+              />
+              <Box
+                sx={{
+                  position: 'absolute',
+                  bottom: 0,
+                  right: 0,
+                  width: 12,
+                  height: 12,
+                  backgroundColor: chatUserStatus === 'online' ? '#66BB6A' : '#747f8d',
+                  borderRadius: '50%',
+                  border: '2px solid #ffffff',
+                }}
+              />
+            </Box>
             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
               <Typography variant="h6" sx={{ fontWeight: '500', color: '#333' }}>{chatUser.username}</Typography>
               <Typography variant="body2" sx={{ color: '#888' }}>
-                {contactLanguage || chatUser.email}
+                {chatUserStatus.charAt(0).toUpperCase() + chatUserStatus.slice(1)}
               </Typography>
             </Box>
           </Box>
@@ -248,7 +320,9 @@ const ChatArea = ({ currentUser, chatUser, onClose }) => {
                     } : undefined,
                   }}
                 >
-                  {isTranslating ? (
+                  {regeneratingTranslation === msg.messageId ? (
+                    <TranslationAnimation />
+                  ) : isTranslating ? (
                     <TranslationAnimation />
                   ) : (
                     <Typography variant="body1">{messageToDisplay}</Typography>
@@ -292,8 +366,22 @@ const ChatArea = ({ currentUser, chatUser, onClose }) => {
           },
         }}
       >
+        {messages.find(msg => msg.messageId === selectedMessageId)?.messageVar2 && (
+          <MenuItem
+            onClick={() => handleMenuOption('regenerate', selectedMessageId)}
+            sx={{
+              fontSize: '14px',
+              padding: '8px 16px',
+              '&:hover': {
+                backgroundColor: '#FFE1FF',
+              },
+            }}
+          >
+            Regenerate Translation
+          </MenuItem>
+        )}
         <MenuItem
-          onClick={() => handleMenuOption('regenerate')}
+          onClick={() => handleMenuOption('toggleOriginal', selectedMessageId)}
           sx={{
             fontSize: '14px',
             padding: '8px 16px',
@@ -302,19 +390,7 @@ const ChatArea = ({ currentUser, chatUser, onClose }) => {
             },
           }}
         >
-          Regenerate Translation
-        </MenuItem>
-        <MenuItem
-          onClick={() => handleMenuOption('showOriginal')}
-          sx={{
-            fontSize: '14px',
-            padding: '8px 16px',
-            '&:hover': {
-              backgroundColor: '#FFE1FF',
-            },
-          }}
-        >
-          Show Original Message
+          {showOriginalFor === selectedMessageId ? 'Hide Original Message' : 'Show Original Message'}
         </MenuItem>
       </Menu>
 
@@ -375,6 +451,12 @@ const ChatArea = ({ currentUser, chatUser, onClose }) => {
         autoHideDuration={3000}
         onClose={() => setShowLanguageNotification(false)}
         message={`${chatUser.username} has updated their language to ${contactLanguage}`}
+      />
+
+      <UserInfoModal
+        user={chatUser}
+        open={isUserInfoModalOpen}
+        onClose={() => setIsUserInfoModalOpen(false)}
       />
     </Box>
   );

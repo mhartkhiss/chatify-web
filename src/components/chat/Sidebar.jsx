@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, List, ListItem, ListItemText, Avatar, ListItemAvatar, Typography, Badge, Button, ButtonGroup, Divider } from '@mui/material';
-import { getDatabase, ref, onValue, update } from 'firebase/database';
+import { getDatabase, ref, onValue, update, off } from 'firebase/database';
 import SearchBar from './SearchBar';
 import UserProfile from './UserProfile';
 import { MessageOutlined, PeopleOutline } from '@mui/icons-material';
@@ -14,16 +14,30 @@ const Sidebar = ({ currentUser, selectChatUser, handleLogout, activeChatUserId }
   const [unreadMessages, setUnreadMessages] = useState({});
   const [selectedUserId, setSelectedUserId] = useState(null); // Track the selected user
   const [filter, setFilter] = useState('recent'); // Filter: 'recent' or 'all'
+  const [userStatuses, setUserStatuses] = useState({});
 
   useEffect(() => {
     const db = getDatabase();
     const usersRef = ref(db, 'users');
     const messagesRef = ref(db, 'messages');
+    const statusRef = ref(db, 'status');
 
-    onValue(usersRef, (snapshot) => {
+    const userUnsubscribe = onValue(usersRef, (snapshot) => {
       const allUsers = snapshot.val() ? Object.values(snapshot.val()) : [];
       const otherUsers = allUsers.filter(user => user.userId !== currentUser.uid);
       setUsers(otherUsers);
+
+      // Set up listeners for each user's status
+      otherUsers.forEach(user => {
+        const userStatusRef = ref(db, `status/${user.userId}`);
+        onValue(userStatusRef, (statusSnapshot) => {
+          const status = statusSnapshot.val();
+          setUserStatuses(prev => ({
+            ...prev,
+            [user.userId]: status || 'offline'
+          }));
+        });
+      });
     });
 
     onValue(messagesRef, (snapshot) => {
@@ -77,6 +91,17 @@ const Sidebar = ({ currentUser, selectChatUser, handleLogout, activeChatUserId }
         [activeChatUserId]: { hasUnread: false, unreadCount: 0 }
       }));
     }
+
+    return () => {
+      off(usersRef);
+      off(messagesRef);
+      off(statusRef);
+      // Clean up individual user status listeners
+      users.forEach(user => {
+        const userStatusRef = ref(db, `status/${user.userId}`);
+        off(userStatusRef);
+      });
+    };
   }, [currentUser, activeChatUserId]);
 
   const sortUsersByLatestMessage = (userList) => {
@@ -212,7 +237,7 @@ const Sidebar = ({ currentUser, selectChatUser, handleLogout, activeChatUserId }
         sx={{
           flexGrow: 1,
           overflowY: 'auto',
-          overflowX: 'hidden', // Hide horizontal scrollbar
+          overflowX: 'hidden',
           backgroundColor: '#ffffff',
         }}
       >
@@ -227,21 +252,36 @@ const Sidebar = ({ currentUser, selectChatUser, handleLogout, activeChatUserId }
                     backgroundColor: user.userId === selectedUserId ? '#f0e6f7' : 'transparent',
                     borderRadius: '8px',
                     my: 0.5,
-                    mx: 0.5, // Reduced horizontal margin
+                    mx: 0.5,
                     '&:hover': {
                       backgroundColor: user.userId === selectedUserId ? '#f0e6f7' : '#f5f5f5',
                     },
-                    position: 'relative', // Add this to allow absolute positioning of the badge
+                    position: 'relative',
                   }}
                 >
                   <ListItemAvatar>
-                    <Avatar src={user.profileImageUrl} sx={{ width: 40, height: 40 }} /> {/* Smaller avatar */}
+                    <Box sx={{ position: 'relative' }}>
+                      <Avatar src={user.profileImageUrl} sx={{ width: 40, height: 40 }} />
+                      {/* Online status indicator */}
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          bottom: 0,
+                          right: 12,
+                          width: 12,
+                          height: 12,
+                          backgroundColor: userStatuses[user.userId] === 'online' ? '#66BB6A' : '#747f8d',
+                          borderRadius: '50%',
+                          border: '2px solid #ffffff',
+                        }}
+                      />
+                    </Box>
                   </ListItemAvatar>
                   <ListItemText
                     primary={
                       <Typography sx={{ 
                         fontWeight: unreadMessages[user.userId]?.hasUnread && user.userId !== activeChatUserId ? 'bold' : 'normal',
-                        fontSize: '0.9rem', // Smaller font size
+                        fontSize: '0.9rem',
                       }}>
                         {user.username}
                       </Typography>
@@ -265,7 +305,7 @@ const Sidebar = ({ currentUser, selectChatUser, handleLogout, activeChatUserId }
                       color="primary"
                       sx={{
                         position: 'absolute',
-                        right: 25, // Adjust this value to move the badge left or right
+                        right: 25,
                         top: '50%',
                         transform: 'translateY(-50%)',
                       }}
