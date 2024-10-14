@@ -26,21 +26,19 @@ const Sidebar = ({ currentUser, selectChatUser, handleLogout, activeChatUserId }
       const allUsers = snapshot.val() ? Object.values(snapshot.val()) : [];
       const otherUsers = allUsers.filter(user => user.userId !== currentUser.uid);
       setUsers(otherUsers);
-
-      // Set up listeners for each user's status
-      otherUsers.forEach(user => {
-        const userStatusRef = ref(db, `status/${user.userId}`);
-        onValue(userStatusRef, (statusSnapshot) => {
-          const status = statusSnapshot.val();
-          setUserStatuses(prev => ({
-            ...prev,
-            [user.userId]: status || 'offline'
-          }));
-        });
-      });
     });
 
-    onValue(messagesRef, (snapshot) => {
+    const statusUnsubscribe = onValue(statusRef, (snapshot) => {
+      const statuses = snapshot.val();
+      if (statuses) {
+        setUserStatuses(prevStatuses => ({
+          ...prevStatuses,
+          ...statuses
+        }));
+      }
+    });
+
+    const messageUnsubscribe = onValue(messagesRef, (snapshot) => {
       const conversations = snapshot.val();
       const userConvo = {};
       const unreadMsg = {};
@@ -96,11 +94,8 @@ const Sidebar = ({ currentUser, selectChatUser, handleLogout, activeChatUserId }
       off(usersRef);
       off(messagesRef);
       off(statusRef);
-      // Clean up individual user status listeners
-      users.forEach(user => {
-        const userStatusRef = ref(db, `status/${user.userId}`);
-        off(userStatusRef);
-      });
+      userUnsubscribe();
+      statusUnsubscribe();
     };
   }, [currentUser, activeChatUserId]);
 
@@ -299,7 +294,7 @@ const Sidebar = ({ currentUser, selectChatUser, handleLogout, activeChatUserId }
                       </Typography>
                     }
                   />
-                  {unreadMessages[user.userId]?.unreadCount > 0 && user.userId !== activeChatUserId && (
+                  {unreadMessages[user.userId]?.unreadCount > 0 && (
                     <Badge
                       badgeContent={unreadMessages[user.userId].unreadCount}
                       color="primary"

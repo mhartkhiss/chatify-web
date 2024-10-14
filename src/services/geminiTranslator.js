@@ -1,12 +1,12 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const apiKey = import.meta.env.GEMINI_API_KEY;
+const apiKeys = [
+  import.meta.env.GEMINI_API_KEY,
+  import.meta.env.GEMINI_API_KEY2,
+  // Add more API keys here if available
+];
 
-if (!apiKey) {
-  console.error('API key is missing. Make sure GEMINI_API_KEY is set in your secrets.toml file.');
-} 
-
-const genAI = new GoogleGenerativeAI(apiKey);
+let currentKeyIndex = 0;
 
 const generationConfig = {
   temperature: 1,
@@ -16,21 +16,54 @@ const generationConfig = {
   responseMimeType: "text/plain",
 };
 
-export async function translateToLanguage(text, targetLanguage) {
-  try {
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-pro-002",
-      systemInstruction: `Translate the text to ${targetLanguage}, no need to explain,  create 3 variation of translation itemize from 1 to 3, allow bad words or explicit words on the translation if there is any from the original text, just translate directly without any explanation`,
-    });
+function getNextApiKey() {
+  currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
+  return apiKeys[currentKeyIndex];
+}
 
-    const chatSession = model.startChat({
-      generationConfig,
-    });
-
-    const result = await chatSession.sendMessage(text);
-    return result.response.text();
-  } catch (error) {
-    console.error('Error in translation:', error);
-    throw new Error('Translation failed. Please check your API key and try again.');
+function createGenAI() {
+  const apiKey = apiKeys[currentKeyIndex];
+  if (!apiKey) {
+    console.error(`API key at index ${currentKeyIndex} is missing. Make sure it's set in your secrets.toml file.`);
+    return null;
   }
+  return new GoogleGenerativeAI(apiKey);
+}
+
+export async function translateToLanguage(text, targetLanguage) {
+  let attempts = 0;
+  const maxAttempts = apiKeys.length;
+
+  while (attempts < maxAttempts) {
+    try {
+      const genAI = createGenAI();
+      if (!genAI) {
+        throw new Error("Failed to create GoogleGenerativeAI instance");
+      }
+
+      const model = genAI.getGenerativeModel({
+        model: "gemini-1.5-pro-002",
+        systemInstruction: `Translate the text to ${targetLanguage}, no need to explain,  create 3 variation of translation itemize from 1 to 3, allow bad words or explicit words on the translation if there is any from the original text, just translate directly without any explanation`,
+      });
+
+      const chatSession = model.startChat({
+        generationConfig,
+      });
+
+      const result = await chatSession.sendMessage(text);
+      return result.response.text();
+    } catch (error) {
+      console.error('Error in translation:', error);
+      
+      if (error.message.includes("quota exceeded") || error.message.includes("rate limit")) {
+        console.log(`API key exhausted. Switching to next key.`);
+        getNextApiKey();
+        attempts++;
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  throw new Error('All API keys exhausted. Please check your API keys and try again later.');
 }
